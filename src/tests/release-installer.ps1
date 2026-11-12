@@ -1,7 +1,9 @@
 ﻿$ErrorActionPreference = 'Stop'
 $PackageRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$Installer = Join-Path $PackageRoot 'dist\windows\Conductor-0.4.0-win-x64-Setup.exe'
-$InstallDir = Join-Path $PackageRoot 'dist\windows\installer 中文 路径\Conductor'
+$Version = (Get-Content -Raw (Join-Path $PackageRoot 'package.json') | ConvertFrom-Json).version
+$OutputDir = Join-Path (Split-Path $PackageRoot -Parent) 'dist\windows'
+$Installer = Join-Path $OutputDir "Conductor-$Version-win-x64-Setup.exe"
+$InstallDir = Join-Path $OutputDir 'installer 中文 路径\Conductor'
 $AppData = Join-Path $env:APPDATA 'ConductorInstalled'
 $Existing = Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall | Get-ItemProperty | Where-Object DisplayName -eq 'Conductor'
 if ($Existing -or (Test-Path -LiteralPath $AppData) -or (Test-Path -LiteralPath $InstallDir)) { throw 'Existing installed Conductor/data found; use a clean VM.' }

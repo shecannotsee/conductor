@@ -2,6 +2,38 @@
 !include MUI2.nsh
 !include LogicLib.nsh
 !include FileFunc.nsh
+!ifdef BUILD_UNINSTALLER
+  !define CONDUCTOR_PROGRESS_PREFIX "un."
+!else
+  !define CONDUCTOR_PROGRESS_PREFIX ""
+!endif
+Function ${CONDUCTOR_PROGRESS_PREFIX}ConductorProgressShow
+  SetDetailsView show
+  GetFunctionAddress $0 ${CONDUCTOR_PROGRESS_PREFIX}ConductorProgressTick
+  nsDialogs::CreateTimer $0 100
+FunctionEnd
+Function ${CONDUCTOR_PROGRESS_PREFIX}ConductorProgressTick
+  Push $0
+  Push $1
+  Push $2
+  FindWindow $0 "#32770" "" $HWNDPARENT
+  GetDlgItem $0 $0 1004
+  SendMessage $0 0x0408 0 0 $1 ; PBM_GETPOS
+  SendMessage $0 0x0407 0 0 $2 ; PBM_GETRANGE: upper limit
+  ${If} $2 > 0
+    IntOp $1 $1 * 100
+    IntOp $1 $1 / $2
+    SendMessage $HWNDPARENT ${WM_SETTEXT} 0 "STR:Conductor - $1%"
+  ${EndIf}
+  Pop $2
+  Pop $1
+  Pop $0
+FunctionEnd
+Function ${CONDUCTOR_PROGRESS_PREFIX}ConductorProgressLeave
+  GetFunctionAddress $0 ${CONDUCTOR_PROGRESS_PREFIX}ConductorProgressTick
+  nsDialogs::KillTimer $0
+  SendMessage $HWNDPARENT ${WM_SETTEXT} 0 "STR:Conductor - 100%"
+FunctionEnd
 !ifndef BUILD_UNINSTALLER
 Var DesktopChoice
 Var MenuChoice
