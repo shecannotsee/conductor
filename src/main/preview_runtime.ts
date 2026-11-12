@@ -15,7 +15,24 @@ function codexHome(profileId = 'default') {
 }
 function workspaceDir() {
   const packaged = process.resourcesPath && fs.existsSync(path.join(process.resourcesPath, 'app.asar'));
-  return path.join(packaged ? path.dirname(process.execPath) : path.resolve(__dirname, '../../..'), 'workspace');
+  const installWorkspace = path.join(packaged ? path.dirname(process.execPath) : path.resolve(__dirname, '../../..'), 'workspace');
+  if (!packaged) {
+    return installWorkspace;
+  }
+  try {
+    fs.mkdirSync(installWorkspace, { recursive: true });
+    fs.accessSync(installWorkspace, fs.constants.R_OK | fs.constants.W_OK);
+    return installWorkspace;
+  } catch {
+    const fallbackBase = process.platform === 'win32'
+      ? (process.env.APPDATA || path.join(os.homedir(), 'AppData/Roaming'))
+      : process.platform === 'darwin'
+        ? path.join(os.homedir(), 'Library/Application Support')
+        : (process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share'));
+    const fallback = path.join(fallbackBase, DATA_NAME, 'workspace');
+    fs.mkdirSync(fallback, { recursive: true });
+    return fallback;
+  }
 }
 function runtimeDir() {
   const packaged = path.join(process.resourcesPath || '', 'runtime');

@@ -129,13 +129,36 @@ class StateStore {
   }
 
   _writeJsonFile(filePath, payload, mode = null) {
-    fs.writeFileSync(filePath, JSON.stringify(payload, null, 2), 'utf-8');
+    const parent = path.dirname(filePath);
+    fs.mkdirSync(parent, { recursive: true });
+    const temporaryPath = `${filePath}.tmp`;
+    const text = JSON.stringify(payload, null, 2);
+    const fd = fs.openSync(temporaryPath, 'w', mode == null ? 0o600 : mode);
+    try {
+      fs.writeFileSync(fd, text, 'utf-8');
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
     if (mode != null) {
       try {
-        fs.chmodSync(filePath, mode);
+        fs.chmodSync(temporaryPath, mode);
       } catch {
         // ignore chmod failures on unsupported filesystems
       }
+    }
+    try {
+      fs.renameSync(temporaryPath, filePath);
+    } catch (error) {
+      // Windows cannot replace an existing file with renameSync. The brief
+      // fallback gap is preferable to leaving a partially written JSON file.
+      if (!['EEXIST', 'EPERM', 'ENOTEMPTY'].includes(error?.code)) {
+        throw error;
+      }
+      fs.rmSync(filePath, { force: true });
+      fs.renameSync(temporaryPath, filePath);
+    } finally {
+      fs.rmSync(temporaryPath, { force: true });
     }
   }
 

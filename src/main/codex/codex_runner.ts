@@ -30,6 +30,9 @@ const {
   trimForStep,
 } = require('./codex_runner_output');
 
+const MAX_RAW_OUTPUT_CHARS = 8 * 1024 * 1024;
+const MAX_ASSISTANT_OUTPUT_CHARS = 4 * 1024 * 1024;
+
 class CodexRunner extends EventEmitter {
   constructor({ profileId = 'default', commandText, prompt, attachments = [], workdir, sessionId = '', useNativeMemory = true }) {
     super();
@@ -64,6 +67,8 @@ class CodexRunner extends EventEmitter {
     const startMs = Date.now();
     const rawLines = [];
     const assistantChunks = [];
+    this.rawOutputChars = 0;
+    this.assistantOutputChars = 0;
     let sessionResetSuggested = false;
 
     try {
@@ -163,9 +168,13 @@ class CodexRunner extends EventEmitter {
         if (!cleanLine) {
           return;
         }
-        rawLines.push(cleanLine);
+        if (this.rawOutputChars < MAX_RAW_OUTPUT_CHARS) {
+          const bounded = cleanLine.slice(0, MAX_RAW_OUTPUT_CHARS - this.rawOutputChars);
+          rawLines.push(bounded);
+          this.rawOutputChars += bounded.length;
+        }
         this.emit('raw_line', cleanLine);
-        this._handleOutputLine(cleanLine, assistantChunks);
+        this._handleOutputLine(cleanLine, assistantChunks, () => this.assistantOutputChars, (value) => { this.assistantOutputChars = value; });
       };
 
       const bindStream = (stream) => {
@@ -184,7 +193,8 @@ class CodexRunner extends EventEmitter {
       });
 
       this.proc.on('error', (error) => {
-        rawLines.push(`process error: ${error.message}`);
+        const errorLine = `process error: ${error.message}`;
+        if (this.rawOutputChars < MAX_RAW_OUTPUT_CHARS) rawLines.push(errorLine.slice(0, MAX_RAW_OUTPUT_CHARS - this.rawOutputChars));
         resolve(1);
       });
     });
@@ -384,11 +394,11 @@ class CodexRunner extends EventEmitter {
     });
   }
 
-  _handleOutputLine(line, assistantChunks) {
+  _handleOutputLine(line, assistantChunks, getAssistantChars = () => 0, setAssistantChars = (_value) => {}) {
     if (line.startsWith('{')) {
       try {
         const event = JSON.parse(line);
-        this._handleEvent(event, assistantChunks);
+        this._handleEvent(event, assistantChunks, getAssistantChars, setAssistantChars);
       } catch {
         this.emit('event', 'info', line);
       }
@@ -418,7 +428,7 @@ class CodexRunner extends EventEmitter {
     this.emit('event', 'info', line);
   }
 
-  _appendAssistantText(assistantChunks, text, emitDelta = true) {
+  _appendAssistantText(assistantChunks, text, emitDelta = true, getAssistantChars = () => 0, setAssistantChars = (_value) => {}) {
     const content = String(text || '').trim();
     if (!content) {
       return;
@@ -426,13 +436,17 @@ class CodexRunner extends EventEmitter {
     if (assistantChunks.length && assistantChunks[assistantChunks.length - 1] === content) {
       return;
     }
-    assistantChunks.push(content);
+    const remaining = MAX_ASSISTANT_OUTPUT_CHARS - getAssistantChars();
+    if (remaining <= 0) return;
+    const bounded = content.slice(0, remaining);
+    assistantChunks.push(bounded);
+    setAssistantChars(getAssistantChars() + bounded.length);
     if (emitDelta) {
-      this.emit('assistant_delta', content);
+      this.emit('assistant_delta', bounded);
     }
   }
 
-  _handleEvent(event, assistantChunks) {
+  _handleEvent(event, assistantChunks, getAssistantChars = () => 0, setAssistantChars = (_value) => {}) {
     const eventType = String(event.type || 'unknown');
 
     if (eventType === 'thread.started') {
@@ -464,7 +478,7 @@ class CodexRunner extends EventEmitter {
     if (eventType === 'response.output_text.delta') {
       if (typeof event.delta === 'string' && event.delta) {
         this.gotStreamDelta = true;
-        this._appendAssistantText(assistantChunks, event.delta, true);
+        this._appendAssistantText(assistantChunks, event.delta, true, getAssistantChars, setAssistantChars);
         this.emit('status', '正在输出回复...');
       }
       return;
@@ -487,7 +501,7 @@ class CodexRunner extends EventEmitter {
 
         if (!this.gotStreamDelta) {
           const fallback = extractResponseMessageText(event.response);
-          this._appendAssistantText(assistantChunks, fallback, true);
+          this._appendAssistantText(assistantChunks, fallback, true, getAssistantChars, setAssistantChars);
         }
       }
       return;
@@ -533,7 +547,7 @@ class CodexRunner extends EventEmitter {
       const texts = extractEventTexts(event);
       for (const text of texts) {
         this.gotStreamDelta = true;
-        this._appendAssistantText(assistantChunks, text, true);
+        this._appendAssistantText(assistantChunks, text, true, getAssistantChars, setAssistantChars);
         this.emit('status', '正在输出回复...');
       }
     }

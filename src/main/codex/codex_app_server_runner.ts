@@ -19,6 +19,7 @@ const {
   toSnakeCase,
   trimForStep,
 } = require('./codex_runner_output');
+const MAX_RAW_OUTPUT_CHARS = 8 * 1024 * 1024;
 const { emitUsageMeta } = require('./codex_runner_usage');
 
 class CodexAppServerRunner extends EventEmitter {
@@ -44,6 +45,7 @@ class CodexAppServerRunner extends EventEmitter {
     this.threadId = sessionId;
     this.activeTurnId = '';
     this.rawLines = [];
+    this.rawOutputChars = 0;
     this.lastUsage = null;
     this.lastModel = '';
   }
@@ -257,7 +259,7 @@ class CodexAppServerRunner extends EventEmitter {
         if (!cleanLine) {
           return;
         }
-        this.rawLines.push(cleanLine);
+        this._appendRawLine(cleanLine);
         this.emit('raw_line', { direction: 'received', line: cleanLine });
         this._handleJsonRpcMessage(cleanLine);
       });
@@ -271,7 +273,7 @@ class CodexAppServerRunner extends EventEmitter {
       if (!cleanLine) {
         return;
       }
-      this.rawLines.push(cleanLine);
+      this._appendRawLine(cleanLine);
       this.emit('event', cleanLine.toLowerCase().includes('error') ? 'error' : 'info', cleanLine);
     });
 
@@ -299,6 +301,15 @@ class CodexAppServerRunner extends EventEmitter {
         this.pendingTurn = null;
       }
     });
+  }
+
+  _appendRawLine(line) {
+    if (this.rawOutputChars >= MAX_RAW_OUTPUT_CHARS) {
+      return;
+    }
+    const bounded = String(line || '').slice(0, MAX_RAW_OUTPUT_CHARS - this.rawOutputChars);
+    this.rawLines.push(bounded);
+    this.rawOutputChars += bounded.length;
   }
 
   _handleJsonRpcMessage(line) {
