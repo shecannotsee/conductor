@@ -26,6 +26,8 @@ function newConversation(title = formatConversationTitle()) {
     goalObjective: '',
     commandText: '',
     sessionId: '',
+    sessionFile: '',
+    sessionFileId: '',
     sessionContinuationMode: '',
     messages: [],
     pinnedAt: 0,

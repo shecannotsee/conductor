@@ -49,6 +49,10 @@ const runtimeSessionFileMethods = {
     }
 
     conv.sessionId = imported.sessionId || '';
+    if (imported.source !== 'conductor' && imported.originator !== 'conductor') {
+      conv.sessionFile = imported.filePath || '';
+      conv.sessionFileId = conv.sessionId;
+    }
     conv.provider = normalizeCliProvider(imported.provider || '', imported.source || imported.originator || '');
     conv.commandText = defaultCommandTextForProvider(conv.provider);
     conv.sessionContinuationMode = conv.sessionId

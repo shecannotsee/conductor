@@ -94,11 +94,23 @@ function resolveAppIconPath() {
 }
 
 async function handleWindowCloseGuard(event) {
-  if (DOCS_CAPTURE_MODE || allowWindowClose || !controller || !mainWindow || mainWindow.isDestroyed()) {
+  if (DOCS_CAPTURE_MODE || !controller || !mainWindow || mainWindow.isDestroyed() || controller._windowSaveComplete || stateFlushedForQuit) {
     return;
   }
   const runningCount = Number(controller.runningConversationCount() || 0);
-  if (runningCount <= 0) {
+  if (runningCount <= 0 || allowWindowClose) {
+    event.preventDefault();
+    if (controller._windowSavePending) return;
+    controller._windowSavePending = true;
+    try {
+      controller._persist();
+      await controller.stateStorage.flush?.();
+      controller._windowSaveComplete = true;
+      mainWindow.close();
+    } catch (error) {
+      controller._windowSavePending = false;
+      dialog.showErrorBox('保存失败', `窗口已保留，请重试。\n${error.message}`);
+    }
     return;
   }
 
@@ -232,7 +244,22 @@ else app.whenReady().then(() => {
   });
 });
 
-app.on('before-quit', () => {
+let stateFlushedForQuit = false;
+app.on('before-quit', (event) => {
+  if (!stateFlushedForQuit && controller?.stateStorage?.flush) {
+    event.preventDefault();
+    if (controller._quitFlushPending) return;
+    controller._quitFlushPending = true;
+    controller._persist();
+    controller.stateStorage.flush().then(() => {
+      stateFlushedForQuit = true;
+      app.quit();
+    }).catch(error => {
+      controller._quitFlushPending = false;
+      dialog.showErrorBox('保存失败', `未退出程序，请重试以保存会话。\n${error.message}`);
+    });
+    return;
+  }
   controller?.shutdownServices?.();
   require('./child_process_helper').terminateManagedChildren();
 });

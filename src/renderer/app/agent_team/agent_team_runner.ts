@@ -115,8 +115,8 @@ function waitForRoleConversation(conversationId: string, previousMessageCount: n
   workflowSummary: string;
   ok: boolean;
 }> {
-  return new Promise((resolve) => {
-    const tick = () => {
+  return new Promise((resolve, reject) => {
+    const tick = async () => {
       const runtime = state.runtimeByConversation[conversationId];
       const conv = findConversation(conversationId);
       const messages = Array.isArray(conv?.messages) ? conv.messages : [];
@@ -124,8 +124,11 @@ function waitForRoleConversation(conversationId: string, previousMessageCount: n
       const running = state.runningConversationIds.has(conversationId);
       const queued = Number(state.queuedCountByConversation[conversationId] || 0) > 0;
       if ((hasNewAssistant || isTerminalPhase(runtime?.phase)) && !running && !queued) {
+        let completeConversation;
+        try { completeConversation = await codexdesk.getConversation(conversationId); }
+        catch (error) { reject(error); return; }
         resolve({
-          assistantText: latestAssistantText(conv),
+          assistantText: latestAssistantText(completeConversation),
           workflowSummary: summarizeWorkflow(runtime, previousWorkflowCount),
           ok: String(runtime?.phase || '').trim() !== '失败',
         });

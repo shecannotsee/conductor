@@ -32,6 +32,7 @@ const runtimePersistenceMethods = {
       remoteControl: this.remoteControl,
       activeConversationId: this.activeConversationId,
       conversations: this.conversations,
+      runningConversationIds: Array.from(this.runners.keys()),
       metaByConversation: this.metaByConversation,
     }, {
       vault: this.vault,

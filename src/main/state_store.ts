@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { createHash } = require('node:crypto');
 
 const { newConversation } = require('./conversation_service');
 const {
@@ -55,7 +56,6 @@ const LEGACY_HOME_DATA_DIR = path.join(os.homedir(), '.codexdesk');
 const LEGACY_STATE_PATHS = [];
 const LEGACY_SECRETS_PATHS = [];
 const DEFAULT_STATE_PATH = path.join(APP_DATA_DIR, 'state.electron.json');
-const MAX_PERSISTED_MESSAGES = 2000;
 const DEFAULT_DEVICE_IDENTITY = '';
 const DEFAULT_SECRETS_PATH = path.join(APP_DATA_DIR, 'secrets.electron.json');
 
@@ -224,6 +224,8 @@ class StateStore {
       conv.id = String(item.id || conv.id).trim() || conv.id;
       conv.title = String(item.title || '').trim() || conv.title;
       conv.sessionId = String(item.sessionId || item.session_id || '').trim();
+      conv.sessionFile = String(item.sessionFile || '');
+      conv.sessionFileId = String(item.sessionFileId || '');
       conv.provider = normalizeCliProvider(item.provider || item.cliProvider || item.cli_provider, item.commandText || item.command_text || commandText);
       const rawConversationCommand = String(item.commandText || item.command_text || '').trim();
       conv.commandText = rawConversationCommand
@@ -235,7 +237,7 @@ class StateStore {
       conv.goalObjective = String(item.goalObjective || item.goal_objective || '').trim();
       conv.goalMode = Boolean(item.goalMode ?? item.goal_mode) || Boolean(conv.goalObjective);
       conv.messages = parseMessages(item.messages);
-      if (!conv.goalObjective) {
+      if (!conv.goalObjective && !item.messagesFile) {
         const latestGoalMessage = [...conv.messages]
           .reverse()
           .find((message) => message?.role === 'user' && String(message.goalObjective || '').trim());
@@ -247,6 +249,7 @@ class StateStore {
       conv.updatedAt = toNumber(item.updatedAt ?? item.updated_at, conv.updatedAt);
       conv.workdir = normalizeWorkdir(item.workdir || workdir);
       fillMissingMessageCreatedAt(conv.messages, conv.createdAt, conv.updatedAt);
+      if (item.messagesFile) require('./conversation_history').attachHistory(conv, this.path + '.messages', item.messagesFile, item.messagePreview);
       conversations.push(conv);
       const rawMeta = data.metaByConversation?.[conv.id] || data.meta_by_conversation?.[conv.id];
       metaByConversation[conv.id] = normalizeMeta(rawMeta, conv.sessionId);
@@ -334,6 +337,7 @@ class StateStore {
     const activeConversationId = resolveActiveConversationId(conversations, state.activeConversationId);
 
     const payload = {
+      schemaVersion: 2,
       commandText: normalizeCommandText(state.commandText || ''),
       workdir: normalizeWorkdir(state.workdir),
       useNativeMemory: Boolean(state.useNativeMemory),
@@ -361,6 +365,8 @@ class StateStore {
           normalizeCliProvider(item.provider || item.cliProvider, item.commandText || state.commandText),
         )),
         sessionId: item.sessionId || '',
+        sessionFile: item.sessionFile || '',
+        sessionFileId: item.sessionFileId || '',
         sessionContinuationMode: item.sessionContinuationMode || '',
         goalMode: Boolean(item.goalMode) || Boolean(String(item.goalObjective || '').trim()),
         goalObjective: String(item.goalObjective || '').trim(),
@@ -368,7 +374,9 @@ class StateStore {
         pinnedAt: Number(item.pinnedAt || 0),
         createdAt: Number(item.createdAt || 0),
         updatedAt: Number(item.updatedAt || 0),
-        messages: Array.isArray(item.messages) ? item.messages.slice(-MAX_PERSISTED_MESSAGES) : [],
+        messages: item.messagesFile ? undefined : (Array.isArray(item.messages) ? item.messages : []),
+        messagesFile: item.messagesFile,
+        messagePreview: item.messagePreview,
       })),
       metaByConversation: conversations.reduce((acc, item) => {
         acc[item.id] = normalizeMeta(state.metaByConversation?.[item.id], item.sessionId);
@@ -441,8 +449,42 @@ class StateStore {
       encrypted: encryptedSecrets,
     };
 
+    // Preserve the original inline history before the first migration.
+    const historyDir = this.path + '.messages';
+    if (!fs.existsSync(historyDir) && fs.existsSync(this.path)) {
+      if (!fs.existsSync(this.path + '.before-split.bak')) fs.copyFileSync(this.path, this.path + '.before-split.bak', fs.constants.COPYFILE_EXCL);
+    }
+    fs.mkdirSync(historyDir, { recursive: true });
+    for (const conv of payload.conversations) {
+      if (conv.messagesFile) {
+        if (!/^[a-f0-9]{64}\.json$/.test(conv.messagesFile)) throw new Error('Invalid history reference');
+        continue;
+      }
+      const messages = conv.messages || [];
+      const text = JSON.stringify(messages);
+      // Immutable content-addressed history keeps the previous index valid if a save fails.
+      const file = createHash('sha256').update(text).digest('hex') + '.json';
+      const target = path.join(historyDir, file);
+      if (!fs.existsSync(target)) this._writeJsonFile(target, messages);
+      conv.messagesFile = file;
+      const last = messages[messages.length - 1];
+      conv.messagePreview = last ? [{ role: last.role, text: String(last.text || '').slice(0, 300), createdAt: last.createdAt }] : [];
+      delete conv.messages;
+    }
+    const previousIndex = this._readStateFile(this.path);
     this._writeJsonFile(this.path, payload);
     this._writeJsonFile(this.secretsPath, secretsPayload, 0o600);
+    // Retain one previous generation; failed writes never invalidate the live index.
+    const retained = new Set([
+      ...payload.conversations.map(conv => conv.messagesFile),
+      ...(previousIndex?.conversations || []).map(conv => conv.messagesFile),
+    ]);
+    for (const file of fs.readdirSync(historyDir)) {
+      if (/^[a-f0-9]{64}\.json$/.test(file) && !retained.has(file)) {
+        try { fs.unlinkSync(path.join(historyDir, file)); } catch { /* retry next save */ }
+      }
+    }
+    return payload.conversations.map(conv => ({ id: conv.id, file: conv.messagesFile, preview: conv.messagePreview }));
   }
 }
 

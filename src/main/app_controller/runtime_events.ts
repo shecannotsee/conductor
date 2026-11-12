@@ -6,7 +6,7 @@ const {
 
 const runtimeEventMethods = {
   _syncConversationUpdated(conversation) {
-    this._emit({ type: 'conversation-updated', conversation });
+    this._emit({ type: 'conversation-updated', conversation: require('../conversation_history').conversationCopy(conversation, conversation.id === this.activeConversationId) });
   },
 
   _setPhase(conversationId, phase) {

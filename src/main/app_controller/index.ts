@@ -130,6 +130,7 @@ class AppController {
     this.runtimeStore = new RuntimeStore();
     this.metaByConversation = {};
     this.runners = new Map();
+    this.stateStorage.isConversationBusy = id => id === this.activeConversationId || this.runners.has(id);
     this.preferAppServerByConversation = {};
     this.pendingQueueByConversation = new Map();
     this.pendingQueueItemSeq = 0;
@@ -159,7 +160,7 @@ class AppController {
       if (!String(this.metaByConversation[conv.id]['会话ID'] || '').trim() || this.metaByConversation[conv.id]['会话ID'] === '-') {
         this.metaByConversation[conv.id]['会话ID'] = conv.sessionId || '-';
       }
-      if (backfillLatestAssistantUsage(conv, this.metaByConversation[conv.id])) {
+      if (require('../conversation_history').historyLoaded(conv) && backfillLatestAssistantUsage(conv, this.metaByConversation[conv.id])) {
         backfilledUsage = true;
       }
     }

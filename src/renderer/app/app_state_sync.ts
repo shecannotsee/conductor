@@ -179,6 +179,12 @@ function applyConversationSwitchPayload(payload: ConversationSwitchPayload | nul
   };
 
   const nextActiveId = String(payload.activeConversationId || state.activeConversationId || '').trim();
+  const previous = state.conversations.find(item => item.id === state.activeConversationId);
+  if (previous && previous.id !== nextActiveId) {
+    const last = previous.messages?.[previous.messages.length - 1];
+    previous.messages = last ? [{ ...last, text: String(last.text || '').slice(0, 300) }] : [];
+    delete state.messageMarkdownByConversation[previous.id];
+  }
   const nextConversation = payload.conversation;
   if (nextConversation && typeof nextConversation === 'object' && String(nextConversation.id || '').trim()) {
     const conversationId = String(nextConversation.id || '').trim();

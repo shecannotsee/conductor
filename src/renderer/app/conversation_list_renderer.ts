@@ -52,6 +52,21 @@ let sortedConversationCache: ConversationSummary[] = [];
 let conversationListCacheVersion = 0;
 let lastConversationListRenderSignature = '';
 let lastConversationListMode = 'conversation';
+const ROW_HEIGHT = 88;
+let virtualItems: ConversationSummary[] = [];
+let virtualSignature = '';
+let virtualBound = false;
+function paintConversationWindow() {
+  if (state.workspaceMode === 'team' || !virtualItems.length) return;
+  const start = Math.max(0, Math.floor(el.conversationList.scrollTop / ROW_HEIGHT) - 5);
+  const end = Math.min(virtualItems.length, start + Math.ceil((el.conversationList.clientHeight || 600) / ROW_HEIGHT) + 10);
+  const signature = `${lastConversationListRenderSignature}:${start}:${end}:${state.activeConversationId}`;
+  if (signature === virtualSignature) return;
+  virtualSignature = signature;
+  el.conversationList.innerHTML = `<div style="height:${start * ROW_HEIGHT}px" aria-hidden="true"></div>`
+    + virtualItems.slice(start, end).map(item => renderConversationListItem(item, state.activeConversationId)).join('')
+    + `<div style="height:${(virtualItems.length - end) * ROW_HEIGHT}px" aria-hidden="true"></div>`;
+}
 
 function toMessageTimeMs(input: unknown): number {
   const raw = Number(input);
@@ -301,10 +316,20 @@ function getConversationListItemCache(item: ConversationSummary): ConversationLi
 function renderConversationListItem(item: ConversationSummary, activeId: string): string {
   const cached = getConversationListItemCache(item);
   const active = item.id === activeId ? ' active' : '';
-  return `<div class="conversation-item${active}" data-id="${cached.idAttr}">${cached.contentHtml}</div>`;
+  return `<div class="conversation-item${active}" style="height:${ROW_HEIGHT - 2}px;box-sizing:border-box;overflow:hidden" data-id="${cached.idAttr}">${cached.contentHtml}</div>`;
 }
 
 function renderConversationList() {
+  if (!virtualBound) {
+    virtualBound = true;
+    let pending = false;
+    el.conversationList.addEventListener('scroll', () => {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(() => { pending = false; paintConversationWindow(); });
+    }, { passive: true });
+    new ResizeObserver(() => paintConversationWindow()).observe(el.conversationList);
+  }
   if (state.workspaceMode === 'team') {
     lastConversationListMode = 'team';
     renderAgentTeamGroupList();
@@ -316,6 +341,9 @@ function renderConversationList() {
   }
   const activeId = state.activeConversationId;
   if (!state.conversations.length) {
+    virtualItems = [];
+    virtualSignature = '';
+    lastConversationListRenderSignature = '';
     el.conversationList.innerHTML = [
       `<div class="tip" style="padding:16px;">${escapeHtml(t('noConversation'))}</div>`,
       `<div class="tip" style="padding:0 16px 16px 16px;">${escapeHtml(t('clickNewConversation'))}</div>`,
@@ -338,9 +366,13 @@ function renderConversationList() {
     return;
   }
   lastConversationListRenderSignature = renderSignature;
-  const html = visibleItems.map((item) => renderConversationListItem(item, activeId)).join('');
+  virtualItems = visibleItems;
+  virtualSignature = '';
+  const maxScroll = Math.max(0, visibleItems.length * ROW_HEIGHT - el.conversationList.clientHeight);
+  el.conversationList.scrollTop = Math.min(el.conversationList.scrollTop, maxScroll);
+  if (visibleItems.length) { paintConversationWindow(); return; }
   const emptyText = keyword ? t('sidebarSearchEmpty') : t('noConversation');
-  el.conversationList.innerHTML = html || `<div class="tip" style="padding:16px;">${escapeHtml(emptyText)}</div>`;
+  el.conversationList.innerHTML = `<div class="tip" style="padding:16px;">${escapeHtml(emptyText)}</div>`;
 }
 
 function updateConversationListActiveState(previousId: string, nextId: string): boolean {

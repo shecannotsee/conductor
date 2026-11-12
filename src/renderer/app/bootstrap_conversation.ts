@@ -22,10 +22,15 @@ export function bindConversationInit(deps: {
   applySnapshot: (snapshot: any) => void;
   applyConversationSwitchPayload: (payload: ConversationSwitchPayload | null | undefined) => void;
 }) {
+  let switchSequence = 0;
   const switchConversationAndRender = async (id: string) => {
+    const sequence = ++switchSequence;
     switchWorkspaceMode('conversation');
     const previousActiveId = state.activeConversationId;
-    const payload = await codexdesk.switchConversation(id);
+    let payload;
+    try { payload = await codexdesk.switchConversation(id); }
+    catch { if (sequence === switchSequence) showAppNotice('无法读取会话记录，请检查文件是否存在。', 'error'); return; }
+    if (sequence !== switchSequence) return;
     deps.applyConversationSwitchPayload(payload);
     if (!updateConversationListActiveState(previousActiveId, state.activeConversationId)) {
       renderConversationList();

@@ -146,6 +146,29 @@ function registerAppIpc({
   }
 
   ipcMain.handle('app:get-snapshot', async () => getController().snapshot());
+  ipcMain.handle('conversation:read', async (event, payload) => {
+    if (event.sender !== getMainWindow()?.webContents || event.senderFrame !== event.sender.mainFrame) throw new Error('无效的请求来源。');
+    const conv = getController().conversations.find(item => item.id === payload?.conversationId);
+    if (!conv) return null;
+    const history = require('./conversation_history');
+    await history.loadHistory(conv);
+    return history.conversationCopy(conv, true);
+  });
+  ipcMain.handle('conversation:reveal-file', async (event, payload) => {
+    if (event.sender !== getMainWindow()?.webContents || event.senderFrame !== event.sender.mainFrame) return { error: '无效的请求来源。' };
+    try {
+      const conv = getController().conversations.find(item => item.id === payload?.conversationId);
+      if (!conv) throw new Error('会话不存在。');
+      if (conv.provider === 'claude') throw new Error('此会话暂不支持定位会话文件。');
+      const home = require('./preview_runtime').codexHome(profiles.forConversation(conv.id));
+      const roots = [path.join(home, 'sessions'), path.join(home, 'archived_sessions')];
+      // Imported conversations may still live in the user's external Codex home.
+      roots.push(path.join(os.homedir(), '.codex', 'sessions'), path.join(os.homedir(), '.codex', 'archived_sessions'));
+      const file = await require('./session_file_locator').findSessionFile(conv.sessionId, roots, conv.sessionFileId === conv.sessionId ? conv.sessionFile : '');
+      require('electron').shell.showItemInFolder(file);
+      return { ok: true };
+    } catch (error) { return { error: error.message || '无法定位会话文件。' }; }
+  });
 
   ipcMain.handle('app:get-info', async () => ({
     ok: true,
@@ -165,7 +188,10 @@ function registerAppIpc({
 
   ipcMain.handle('app:update-settings', async (_, payload) => getController().updateSettings(payload || {}));
   ipcMain.handle('app:set-master-password', async (_, payload) => getController().setMasterPassword(payload?.password));
-  ipcMain.handle('app:unlock-master-password', async (_, payload) => getController().unlockMasterPassword(payload?.password));
+  ipcMain.handle('app:unlock-master-password', async (_, payload) => {
+    await getController().stateStorage.flush?.();
+    return getController().unlockMasterPassword(payload?.password);
+  });
   ipcMain.handle('app:lock-master-password', async () => getController().lockMasterPassword());
   ipcMain.handle('app:test-notification-provider', async () => getController().testNotificationProvider());
   ipcMain.handle('app:test-remote-control-provider', async () => getController().testRemoteControlProvider());
@@ -193,8 +219,13 @@ function registerAppIpc({
     };
   });
 
+  let conversationSwitchSeq = 0;
   ipcMain.handle('conversation:switch', async (_, payload) => {
+    const seq = ++conversationSwitchSeq;
     const id = String(payload?.conversationId || '');
+    const conv = getController().conversations.find(item => item.id === id);
+    if (conv) await require('./conversation_history').loadHistory(conv);
+    if (seq !== conversationSwitchSeq) return getController()._conversationSwitchPayload();
     return getController().switchConversation(id);
   });
 

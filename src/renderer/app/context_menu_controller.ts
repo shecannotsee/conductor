@@ -85,6 +85,11 @@ async function copyPlainText(text) {
 }
 
 export function createContextMenuController(options: ContextMenuOptions) {
+  const sessionFileButton = document.createElement('button');
+  sessionFileButton.type = 'button';
+  sessionFileButton.id = 'ctx-session-file';
+  sessionFileButton.textContent = '会话文件';
+  el.ctxExportConv?.after(sessionFileButton);
   let contextMenuConversationId = '';
   let contextMenuTeamGroupId = '';
   let chatContextSelectionText = '';
@@ -104,6 +109,7 @@ export function createContextMenuController(options: ContextMenuOptions) {
     }
     contextMenuConversationId = '';
     contextMenuTeamGroupId = String(groupId || '').trim();
+    sessionFileButton.hidden = true;
     const hasTarget = Boolean(contextMenuTeamGroupId);
     if (el.ctxNewConv) {
       el.ctxNewConv.textContent = t('agentTeamCreate');
@@ -139,6 +145,8 @@ export function createContextMenuController(options: ContextMenuOptions) {
     contextMenuConversationId = String(conversationId || '');
     contextMenuTeamGroupId = '';
     const hasTarget = Boolean(contextMenuConversationId);
+    sessionFileButton.hidden = !hasTarget;
+    sessionFileButton.disabled = !hasTarget;
     const targetConversation = findConversationById(contextMenuConversationId);
     if (el.ctxNewConv) {
       el.ctxNewConv.textContent = t('contextMenuNew');
@@ -203,6 +211,15 @@ export function createContextMenuController(options: ContextMenuOptions) {
   };
 
   const bind = () => {
+    sessionFileButton.addEventListener('click', async () => {
+      const id = contextMenuConversationId;
+      hideConversationContextMenu();
+      if (!id) return;
+      try {
+        const result = await codexdesk.revealSessionFile(id);
+        if (result?.error) window.alert(result.error);
+      } catch { window.alert('无法定位会话文件，请稍后重试。'); }
+    });
     el.conversationList.addEventListener('contextmenu', (event) => {
       event.preventDefault();
       const row = getEventElementTarget(event)?.closest('.conversation-item');

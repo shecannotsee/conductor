@@ -20,7 +20,7 @@ const runtimeSnapshotMethods = {
         security: securitySnapshot(this),
       },
       activeConversationId: activeId,
-      conversation: conv || null,
+      conversation: conv ? require('../conversation_history').conversationCopy(conv, true) : null,
       runtime: runtime ? {
         workflow: [...runtime.workflow],
         events: [...runtime.events],
@@ -54,7 +54,7 @@ const runtimeSnapshotMethods = {
         security: securitySnapshot(this),
       },
       activeConversationId: this.activeConversationId,
-      conversations: sortedConversations(this.conversations),
+      conversations: sortedConversations(this.conversations).map(conv => require('../conversation_history').conversationCopy(conv, conv.id === this.activeConversationId)),
       runtimeByConversation: this.runtimeStore.toObject(),
       metaByConversation: this.metaByConversation,
       runningConversationIds: Array.from(this.runners.keys()),

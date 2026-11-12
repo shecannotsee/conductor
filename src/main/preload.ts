@@ -39,6 +39,8 @@ contextBridge.exposeInMainWorld('codexdesk', {
     workdirChoice,
   }),
   exportSession: (conversationId) => ipcRenderer.invoke('conversation:export-session', { conversationId }),
+  revealSessionFile: (conversationId) => ipcRenderer.invoke('conversation:reveal-file', { conversationId }),
+  getConversation: (conversationId) => ipcRenderer.invoke('conversation:read', { conversationId }),
   renameConversation: (conversationId, title) => ipcRenderer.invoke('conversation:rename', { conversationId, title }),
   toggleConversationPin: (conversationId) => ipcRenderer.invoke('conversation:toggle-pin', { conversationId }),
   closeCurrentConversation: () => ipcRenderer.invoke('conversation:close-current'),
