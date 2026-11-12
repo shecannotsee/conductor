@@ -13,6 +13,8 @@ dist/windows/
 src/app/
 src/*.tsbuildinfo
 src/build/icon.png
+src/build/icon.ico
+src/build/ico/
 
 # OS/editor noise
 .DS_Store

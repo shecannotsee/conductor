@@ -70,7 +70,7 @@ function cleanupTempFiles() {
   fs.rmSync(tempPrepared, { force: true });
 }
 
-function main() {
+async function main() {
   ensureDir(targetDir);
   const source = resolveSourceLogo();
 
@@ -98,6 +98,16 @@ function main() {
   } finally {
     cleanupTempFiles();
   }
+  // Use the pinned builder converter: do not depend on system ImageMagick for ICO.
+  const { executeAppBuilderAsJson } = require('app-builder-lib/out/util/appBuilder');
+  const result = await executeAppBuilderAsJson([
+    'icon', '--format', 'ico', '--root', targetDir,
+    '--out', path.join(targetDir, 'ico'), '--input', target,
+  ]);
+  if (result.error || result.isFallback || !result.icons?.length) {
+    throw new Error(result.error || 'Logo ICO conversion failed');
+  }
+  fs.copyFileSync(result.icons[0].file, path.join(targetDir, 'icon.ico'));
 }
 
-main();
+main().catch(error => { console.error(error); process.exitCode = 1; });

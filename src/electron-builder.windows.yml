@@ -28,9 +28,11 @@ win:
     - target: nsis
       arch: [x64]
   executableName: Conductor
-  icon: build/icon.png
+  icon: build/icon.ico
   signAndEditExecutable: true
 nsis:
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
   installerLanguages: [zh_CN, en_US]
   language: 2052
   oneClick: false

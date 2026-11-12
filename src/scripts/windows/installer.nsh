@@ -88,11 +88,23 @@ FunctionEnd
 !macroend
 !macro customInstall
   CreateDirectory "$INSTDIR\workspace"
+  ; A versioned icon path invalidates Explorer's old executable icon cache.
+  SetOutPath "$INSTDIR"
+  File /oname=conductor-${VERSION}.ico "${BUILD_RESOURCES_DIR}\icon.ico"
   ${If} $DesktopChoice == 0
     Delete "$newDesktopLink"
+  ${ElseIfNot} ${isNoDesktopShortcut}
+    CreateShortCut "$newDesktopLink" "$appExe" "" "$INSTDIR\conductor-${VERSION}.ico" 0 "" "" "${APP_DESCRIPTION}"
+    WinShell::SetLnkAUMI "$newDesktopLink" "${APP_ID}"
+    System::Call 'Shell32::SHChangeNotify(i 0x2000, i 0x1005, w "$newDesktopLink", p 0)'
   ${EndIf}
   ${If} $MenuChoice == 0
     Delete "$newStartMenuLink"
+  ${Else}
+    !insertmacro createMenuDirectory
+    CreateShortCut "$newStartMenuLink" "$appExe" "" "$INSTDIR\conductor-${VERSION}.ico" 0 "" "" "${APP_DESCRIPTION}"
+    WinShell::SetLnkAUMI "$newStartMenuLink" "${APP_ID}"
+    System::Call 'Shell32::SHChangeNotify(i 0x2000, i 0x1005, w "$newStartMenuLink", p 0)'
   ${EndIf}
   WriteRegStr HKCU "Software\ConductorDesktop" DesktopShortcut $DesktopChoice
   WriteRegStr HKCU "Software\ConductorDesktop" StartMenuShortcut $MenuChoice
