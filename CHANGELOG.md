@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.1] - 2026-11-13
+
+### Fixed
+
+- Windows 安装和升级时重写桌面、开始菜单快捷方式，使用随版本安装的独立 Logo ICO，并通知 Windows 刷新图标，避免继续引用旧 EXE 图标缓存。
+- 使用固定版本的构建工具生成 ICO，统一应用、安装器和卸载器图标，不依赖系统安装 ImageMagick。
+- 安装回归增加快捷方式目标、图标文件校验及旧快捷方式覆盖升级验证。
+
 ## [Unreleased]
 
 ### Added
