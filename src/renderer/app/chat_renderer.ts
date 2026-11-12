@@ -325,7 +325,9 @@ function messageRoleLabel(item: ConversationMessage, conversation: ConversationS
   if (item.role === 'user') {
     return t('roleYou');
   }
-  return agentTeamRoleNameForConversation(conversation.id) || conversationProviderLabel(conversation);
+  const model = String(item.model || item.usage?.model || '').trim();
+  const effort = String(item.reasoningEffort || '').trim();
+  return [model || 'AI', effort].filter(Boolean).join(' · ');
 }
 
 function renderMessageUsageFooter(conversation: ConversationSummary, latestAssistantIndex: number, index: number, item: ConversationMessage): string {

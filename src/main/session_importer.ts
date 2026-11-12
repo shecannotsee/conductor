@@ -221,6 +221,7 @@ function importSessionJsonl(filePath) {
   const messages = [];
   let sessionMeta = null;
   let latestModel = '';
+  let latestEffort = '';
 
   for (const line of lines) {
     const record = safeParseLine(line);
@@ -238,6 +239,7 @@ function importSessionJsonl(filePath) {
       if (candidate) {
         latestModel = candidate;
       }
+      latestEffort = String(record.payload.reasoning_effort || record.payload.effort || '');
       continue;
     }
 
@@ -269,6 +271,7 @@ function importSessionJsonl(filePath) {
     messages.push({
       role,
       text: contentText,
+      ...(role === 'assistant' ? { model: String(payload.model || latestModel || usage?.model || ''), reasoningEffort: String(payload.reasoningEffort || latestEffort || '') } : {}),
       ...(attachments.length ? { attachments } : {}),
       ...(usage ? { usage } : {}),
       createdAt: createdAt || undefined,

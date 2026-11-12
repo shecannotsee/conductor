@@ -165,6 +165,8 @@ function bindChatRunnerEvents(controller, {
       targetConv.messages.push({
         role: 'assistant',
         text: finalText,
+        model: String(result?.model || runner.replyIdentity?.model || messageUsage?.model || ''),
+        reasoningEffort: String(runner.replyIdentity?.reasoningEffort || ''),
         ...(messageUsage ? { usage: messageUsage } : {}),
         createdAt: nowTs(),
       });

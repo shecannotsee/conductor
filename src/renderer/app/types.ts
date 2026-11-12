@@ -75,6 +75,8 @@ export interface UiState {
 }
 
 export interface ConversationMessage {
+  model?: string;
+  reasoningEffort?: string;
   role: 'user' | 'assistant';
   text: string;
   speakerName?: string;
@@ -419,6 +421,8 @@ export interface CodexDeskApi {
   pickImportSession(): Promise<GenericResult>;
   importSessionFromFile(filePath: string, continuationMode: string, workdirChoice?: ImportWorkdirChoice): Promise<GenericResult>;
   exportSession(conversationId: string): Promise<GenericResult>;
+  revealSessionFile(conversationId: string): Promise<GenericResult>;
+  getConversation(conversationId: string): Promise<ConversationSummary | null>;
   renameConversation(conversationId: string, title: string): Promise<GenericResult>;
   toggleConversationPin(conversationId: string): Promise<GenericResult>;
   closeCurrentConversation(): Promise<AppSnapshot>;

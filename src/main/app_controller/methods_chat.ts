@@ -396,6 +396,14 @@ const chatMethods = {
         useNativeMemory: this.useNativeMemory,
       });
 
+    if (!useClaudeRunner) {
+      const selected = require('../codex_settings').readSettings(profileId);
+      runner.replyIdentity = { model: selected.model, reasoningEffort: selected.effort };
+      this._ensureMeta(targetId)['模型'] = selected.model;
+      this._ensureMeta(targetId)['推理强度'] = selected.effort;
+      this._emit({ type: 'meta-updated', conversationId: targetId, key: '模型', value: selected.model });
+      this._emit({ type: 'meta-updated', conversationId: targetId, key: '推理强度', value: selected.effort });
+    }
     this.runners.set(targetId, runner);
     this._emit({ type: 'runner-state', conversationId: targetId, running: true });
     const streamPreviewEnv = String(

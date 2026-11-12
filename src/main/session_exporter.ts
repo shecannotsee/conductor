@@ -60,6 +60,8 @@ function buildMessageRecord(message) {
       type: 'message',
       role,
       text,
+      ...(message.model ? { model: String(message.model) } : {}),
+      ...(message.reasoningEffort ? { reasoningEffort: String(message.reasoningEffort) } : {}),
       ...(usage ? { usage } : {}),
       ...(attachments.length ? { attachments } : {}),
       content: [

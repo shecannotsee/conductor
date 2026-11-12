@@ -95,6 +95,8 @@ function parseMessages(rawMessages) {
     const text = String(item.text || '');
     if ((role === 'user' || role === 'assistant') && text) {
       const message: any = { role, text };
+      if (item.model) message.model = String(item.model);
+      if (item.reasoningEffort) message.reasoningEffort = String(item.reasoningEffort);
       const rawUsage = item.usage;
       if (rawUsage && typeof rawUsage === 'object') {
         const inputTokens = toNumber(rawUsage.inputTokens ?? rawUsage.input_tokens, 0);
