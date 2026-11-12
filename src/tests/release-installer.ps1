@@ -6,7 +6,14 @@ $Installer = Join-Path $OutputDir "Conductor-$Version-win-x64-Setup.exe"
 $InstallDir = Join-Path $OutputDir 'installer 中文 路径\Conductor'
 $AppData = Join-Path $env:APPDATA 'ConductorInstalled'
 $Existing = Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall | Get-ItemProperty | Where-Object DisplayName -eq 'Conductor'
+$MachineExisting = Get-ChildItem HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall | Get-ItemProperty | Where-Object DisplayName -eq 'Conductor'
+$ShortcutPaths = @(
+    (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Conductor.lnk'),
+    (Join-Path ([Environment]::GetFolderPath('Programs')) 'Conductor.lnk')
+)
+if ($MachineExisting -or @($ShortcutPaths | Where-Object { Test-Path -LiteralPath $_ }).Count) { throw 'Existing installation/shortcuts found; use a clean VM.' }
 if ($Existing -or (Test-Path -LiteralPath $AppData) -or (Test-Path -LiteralPath $InstallDir)) { throw 'Existing installed Conductor/data found; use a clean VM.' }
+if (!(Test-Path -LiteralPath (Join-Path $PackageRoot '.runtime-downloads\speech-test.wav'))) { throw 'Missing speech fixture; run node --use-env-proxy scripts/prepare-speech-test.js from src first.' }
 $BeforeUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
 $BeforeMachinePath = [Environment]::GetEnvironmentVariable('Path', 'Machine')
 $OriginalProcesses = @(Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'electron.exe' -and $_.CommandLine -like '*E:\workspace\conductor\*' } | Select-Object -ExpandProperty ProcessId)
@@ -14,6 +21,22 @@ function Install-Conductor {
     $Process = Start-Process -FilePath $Installer -ArgumentList @('/S', "/D=`"$InstallDir`"") -WindowStyle Hidden -Wait -PassThru
     if ($Process.ExitCode -ne 0) { throw "Installer failed: $($Process.ExitCode)" }
     if (!(Test-Path -LiteralPath (Join-Path $InstallDir 'Conductor.exe'))) { throw 'Installed executable missing' }
+    Assert-ShortcutIcons
+}
+function Assert-ShortcutIcons {
+    $ExpectedIcon = Join-Path $InstallDir "conductor-$Version.ico"
+    if ((Get-FileHash -LiteralPath $ExpectedIcon).Hash -ne (Get-FileHash -LiteralPath (Join-Path $PackageRoot 'build\icon.ico')).Hash) { throw 'Installed logo differs from build logo' }
+    Add-Type -AssemblyName System.Drawing
+    $Icon = [Drawing.Icon]::new($ExpectedIcon)
+    $Icon.Dispose()
+    $Shell = New-Object -ComObject WScript.Shell
+    foreach ($Link in $ShortcutPaths) {
+        if (!(Test-Path -LiteralPath $Link)) { throw "Missing shortcut: $Link" }
+        $Shortcut = $Shell.CreateShortcut($Link)
+        if ($Shortcut.TargetPath -ne (Join-Path $InstallDir 'Conductor.exe')) { throw "Wrong target: $Link" }
+        if ($Shortcut.IconLocation -ne "$ExpectedIcon,0") { throw "Wrong icon: $Link -> $($Shortcut.IconLocation)" }
+        Write-Host "PASS shortcut: $Link -> $($Shortcut.IconLocation)"
+    }
 }
 function Uninstall-Conductor([bool]$DeleteData) {
     $Arguments = @('/S')
@@ -42,6 +65,13 @@ Set-Content -LiteralPath (Join-Path $AppData 'state.electron.json') -Value 'test
 if ($LASTEXITCODE -ne 0) { throw 'Installed settings UI failed' }
 & node (Join-Path $PSScriptRoot 'speech-ui.cjs') (Join-Path $InstallDir 'Conductor.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Installed speech UI failed' }
+# Simulate legacy shortcuts referencing an executable instead of the logo.
+$Shell = New-Object -ComObject WScript.Shell
+foreach ($Link in $ShortcutPaths) {
+    $Shortcut = $Shell.CreateShortcut($Link)
+    $Shortcut.IconLocation = (Join-Path $InstallDir 'Conductor.exe') + ',0'
+    $Shortcut.Save()
+}
 Install-Conductor
 if (!(Test-Path -LiteralPath $WorkspaceFile)) { throw 'Upgrade removed workspace' }
 if (!(Test-Path -LiteralPath (Join-Path $AppData 'state.electron.json'))) { throw 'Upgrade removed app data' }
