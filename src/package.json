@@ -1,6 +1,6 @@
 {
   "name": "conductor",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "description": "Electron implementation of Conductor",
   "main": "app/main/main.js",
