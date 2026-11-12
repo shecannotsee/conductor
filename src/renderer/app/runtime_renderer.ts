@@ -1,4 +1,4 @@
-import type { RawEventEntry, RuntimeState, WorkflowItem } from './types.js';
+import type { RawEventEntry, RuntimeEventItem, RuntimeState, WorkflowItem } from './types.js';
 import {
   el,
   ensureRuntimeVisibleCount,
@@ -313,26 +313,47 @@ function renderRuntimePaginationBar(tab: 'structured' | 'workflow' | 'raw', tota
   ].join('');
 }
 
+function renderStructuredEventHtml(item: RuntimeEventItem, index: number): string {
+  const level = escapeHtml(item.level || 'info');
+  const message = escapeHtml(localizeKnownText(item.message || ''));
+  const rawRefId = String(item.rawRefId || '').trim();
+  const kind = String(item.kind || '').trim().toLowerCase();
+  const kindClass = kind ? ` kind-${escapeHtml(kind)}` : '';
+  return [
+    `<div class="runtime-event level-${level}${kindClass}${rawRefId ? ' is-linkable' : ''}" data-runtime-event-index="${index}"${rawRefId ? ` data-raw-ref-id="${escapeHtml(rawRefId)}"` : ''}>`,
+    '<div class="runtime-event-main">',
+    `<span class="ts">[${escapeHtml(item.timestamp || '--:--:--')}]</span> `,
+    `<b>${escapeHtml(String(item.level || 'INFO').toUpperCase())}</b> `,
+    `<span>${message}</span>`,
+    '</div>',
+    '</div>',
+  ].join('');
+}
+
 function renderStructuredTab(runtime: RuntimeState, stickToBottom = true) {
   const totalCount = Array.isArray(runtime.events) ? runtime.events.length : 0;
   const visibleCount = ensureRuntimeVisibleCount(state.activeConversationId, 'structured', totalCount);
   const startIndex = Math.max(0, totalCount - visibleCount);
-  const html = runtime.events.slice(startIndex).map((item) => {
-    const level = escapeHtml(item.level || 'info');
-    const message = escapeHtml(localizeKnownText(item.message || ''));
-    const rawRefId = String(item.rawRefId || '').trim();
-    const kind = String(item.kind || '').trim().toLowerCase();
-    const kindClass = kind ? ` kind-${escapeHtml(kind)}` : '';
-    return [
-      `<div class="runtime-event level-${level}${kindClass}${rawRefId ? ' is-linkable' : ''}"${rawRefId ? ` data-raw-ref-id="${escapeHtml(rawRefId)}"` : ''}>`,
-      '<div class="runtime-event-main">',
-      `<span class="ts">[${escapeHtml(item.timestamp || '--:--:--')}]</span> `,
-      `<b>${escapeHtml(String(item.level || 'INFO').toUpperCase())}</b> `,
-      `<span>${message}</span>`,
-      '</div>',
-      '</div>',
-    ].join('');
-  }).join('');
+  const existingEvents = el.tabStructured.querySelectorAll('.runtime-event');
+  const lastExistingIndex = existingEvents.length
+    ? Number(existingEvents[existingEvents.length - 1].getAttribute('data-runtime-event-index'))
+    : -1;
+  if (
+    totalCount > 0
+    && totalCount <= visibleCount
+    && existingEvents.length > 0
+    && existingEvents.length === totalCount - 1
+    && lastExistingIndex === totalCount - 2
+  ) {
+    el.tabStructured.insertAdjacentHTML('beforeend', renderStructuredEventHtml(runtime.events[totalCount - 1], totalCount - 1));
+    if (stickToBottom) {
+      el.tabStructured.scrollTop = el.tabStructured.scrollHeight;
+    }
+    return;
+  }
+  const html = runtime.events.slice(startIndex).map((item, offset) => (
+    renderStructuredEventHtml(item, startIndex + offset)
+  )).join('');
 
   el.tabStructured.innerHTML = `${renderRuntimePaginationBar('structured', totalCount, visibleCount)}${html}`;
   el.tabStructured.onclick = (event) => {
