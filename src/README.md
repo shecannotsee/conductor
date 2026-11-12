@@ -39,7 +39,7 @@ npm run dist:deb
 
 Project-level docs live in `../README.md` and `../docs/`.
 
-## Windows Preview
+## Windows Packaging
 
 See [Windows release guide](../docs/windows-release-0.4.md). `main/preview_runtime.ts` owns private paths/environment; `main/codex_settings.ts` owns config/auth and probes; `renderer/app/codex_settings_ui.ts` provides setup. `electron-builder.windows.yml` and `scripts/windows/` implement isolated installation and removal.
 

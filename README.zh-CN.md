@@ -93,4 +93,4 @@ npm run capture:docs
 - 已验证：Windows development run
 - 未验证：macOS
 
-- Preview 0.3: [本地中文流式语音输入 / Local streaming speech input](docs/voice-input.md).
+- 本地中文流式语音输入：[语音输入说明](docs/voice-input.md)。

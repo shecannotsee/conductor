@@ -1,6 +1,6 @@
 # FAQ
 
-> Windows Preview 的四项 API 配置、私有运行环境和安装/卸载行为，见 [Windows Preview 指南](windows-preview.md)。
+> Windows 安装版的 API 配置、私有运行环境、升级和卸载行为，见 [Windows 发布指南](windows-release-0.4.md)。
 
 ## 1. 为什么提示“未找到 codex/claude 命令”？
 
@@ -88,6 +88,6 @@ Codex 会使用兼容 `codex exec --image` 的路径。app-server 当前不承�
 
 当前已验证 Ubuntu 22.04 和 Windows 开发运行。macOS 未验证；Windows 打包安装流程也尚未验证。
 
-## Preview 语音输入
+## 语音输入
 
 输入框旁的“语音输入”使用本地中文流式模型，无需 API Key。详见 [语音输入使用和跨平台部署](voice-input.md)。

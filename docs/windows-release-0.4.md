@@ -8,7 +8,7 @@
 - 默认工作目录：`安装目录/workspace`。可以为各对话选择外部目录。
 - 内置 Node、npm、Codex 和流式语音识别模型；不注册系统 PATH。
 - 应用数据：`%APPDATA%/ConductorInstalled`。源码版使用的 `%APPDATA%/Conductor` 和项目 `.conductor` 不受影响。
-- 本版使用独立的应用 ID，与先前的 Conductor Preview 可以并存，不自动迁移其配置和聊天记录。首次使用请填写配置。
+- 本版使用独立的应用 ID，与源码版运行环境隔离，不自动迁移旧版配置和聊天记录。首次使用请填写配置。
 - 安装器和卸载器使用 `PerMonitorV2,PerMonitor` DPI 声明，同时提供旧系统 DPI 感知回退。安装器不再请求 Windows 将低分辨率窗口整体拉伸。跨屏移动和 4K 缩放的实际观感仍需在对应显示器上确认。
 
 ## API 配置
@@ -46,8 +46,8 @@ Windows 设置 → 应用 → Conductor → 卸载，或运行安装目录的 `U
 
 ```text
 npm run check
-npm run test:preview
-node tests/preview-smoke.cjs
+npm run test:windows
+npm run test:windows:ui
 node tests/settings-connection-ui.cjs
 node tests/uninstall-data.cjs
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/release-installer.ps1

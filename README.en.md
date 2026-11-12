@@ -95,4 +95,4 @@ npm run capture:docs
 - Verified: Windows development run
 - Not yet verified: macOS
 
-- Preview 0.3: [本地中文流式语音输入 / Local streaming speech input](docs/voice-input.md).
+- Local Chinese streaming speech input: [voice input guide](docs/voice-input.md).

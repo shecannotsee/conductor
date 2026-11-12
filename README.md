@@ -129,4 +129,4 @@ npm run capture:docs
 
 MIT, see [LICENSE](./LICENSE).
 
-- Preview 0.3: [本地中文流式语音输入 / Local streaming speech input](docs/voice-input.md).
+- 本地中文流式语音输入 / Local streaming speech input: [voice input guide](docs/voice-input.md).
