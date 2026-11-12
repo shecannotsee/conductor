@@ -1,5 +1,7 @@
 # 技术架构
 
+> Windows Preview 的四项 API 配置、私有运行环境和安装/卸载行为，见 [Windows Preview 指南](windows-preview.md)。
+
 ## 1. 总体边界
 
 Conductor 是一个 Electron 应用，但业务逻辑不直接堆在窗口代码里。当前主进程按领域组织：
@@ -120,3 +122,7 @@ Main 通过 `app:event` 推送运行态更新：
 ## 7. 文档截图
 
 `cd src && npm run capture:docs` 会启动独立 Electron 文档截图窗口。Renderer 准备模拟会话数据，Main 用 `capturePage()` 写入 `docs/assets/*.png`，完成后自动退出。
+
+## Preview speech sidecar
+
+`renderer/app/speech_input.ts` and `renderer/audio/pcm-worklet.js` capture microphone PCM. `main/speech_service.ts` validates session-bound IPC and controls a private Node sidecar (`speech-package/worker.cjs`). Models and native libraries stay outside ASAR in runtime/speech. Partial results remain separate; finalized punctuated segments append to the active draft. No audio files or listening ports are created. See [voice input](voice-input.md).

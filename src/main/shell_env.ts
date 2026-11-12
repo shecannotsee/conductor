@@ -76,11 +76,8 @@ function getShellEnv() {
   return cachedShellEnv;
 }
 
-function getCodexChildEnv() {
-  return {
-    ...process.env,
-    ...getShellEnv(),
-  };
+function getCodexChildEnv(profileId = 'default') {
+  return require('./preview_runtime').privateEnv({ ...process.env, ...getShellEnv() }, profileId);
 }
 
 module.exports = {

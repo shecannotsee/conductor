@@ -43,7 +43,7 @@ class ClaudeRunner extends EventEmitter {
     this.stopped = true;
     if (this.proc && !this.proc.killed) {
       this.emit('status', '正在停止当前 Claude 任务...');
-      this.proc.kill('SIGTERM');
+      require('../child_process_helper').stopChildTree(this.proc);
     }
   }
 

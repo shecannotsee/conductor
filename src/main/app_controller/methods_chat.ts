@@ -364,6 +364,8 @@ const chatMethods = {
       this._appendStructuredEvent(targetId, 'hint', `检测到 ${normalizedAttachments.length} 个图片附件，已切换到 exec --image 模式`);
     }
 
+    require('../codex_profiles').pinExisting(this.conversations);
+    const profileId = require('../codex_profiles').forConversation(targetId);
     const runner = useClaudeRunner
       ? new ClaudeRunner({
         commandText,
@@ -376,6 +378,7 @@ const chatMethods = {
       })
       : useAppServer
       ? new CodexAppServerRunner({
+        profileId,
         commandText,
         prompt,
         workdir,
@@ -384,6 +387,7 @@ const chatMethods = {
         goalObjective,
       })
       : new CodexRunner({
+        profileId,
         commandText,
         prompt,
         attachments: normalizedAttachments,

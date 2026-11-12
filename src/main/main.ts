@@ -19,7 +19,10 @@ const {
   templateText,
 } = require('./menu_window_actions');
 
-app.setName('Conductor');
+const { PREVIEW_NAME, dataDir } = require('./preview_runtime');
+app.setName(PREVIEW_NAME);
+app.setPath('userData', dataDir());
+app.setAppUserModelId('com.conductor.desktop');
 
 let mainWindow = null;
 let controller = null;
@@ -146,6 +149,14 @@ function createWindow() {
   mainWindow.setMenuBarVisibility(false);
   applyWindowTheme('light');
   const wc = mainWindow.webContents;
+  wc.session.setPermissionCheckHandler((contents, permission, _origin, details) => {
+    return contents === mainWindow?.webContents && permission === 'media' && details.mediaType === 'audio';
+  });
+  wc.session.setPermissionRequestHandler((contents, permission, callback, details) => {
+    callback(contents === mainWindow?.webContents && permission === 'media'
+      && details.mediaTypes?.length > 0 && details.mediaTypes.every(type => type === 'audio'));
+  });
+
 
   wc.setWindowOpenHandler(({ url }) => {
     openExternalUrl(url);
@@ -171,7 +182,9 @@ function createWindow() {
     }
   });
 
-  mainWindow.loadFile(path.join(resolvePackageRoot(__dirname), 'app', 'renderer', 'index.html'));
+  mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
+  mainWindow.on('page-title-updated', (event) => { event.preventDefault(); mainWindow.setTitle(PREVIEW_NAME); });
+  mainWindow.setTitle(PREVIEW_NAME);
 
   mainWindow.on('close', (event) => {
     handleWindowCloseGuard(event).catch(() => {});
@@ -205,11 +218,13 @@ function registerIpc() {
   });
 }
 
-app.whenReady().then(() => {
+if (!app.requestSingleInstanceLock()) { app.quit(); }
+else app.whenReady().then(() => {
   menuLanguage = normalizeLanguage(app.getLocale());
   registerIpc();
   createWindow();
 
+  app.on('second-instance', () => { if (mainWindow) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.focus(); } });
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -219,6 +234,7 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   controller?.shutdownServices?.();
+  require('./child_process_helper').terminateManagedChildren();
 });
 
 app.on('window-all-closed', () => {

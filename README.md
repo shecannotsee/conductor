@@ -1,5 +1,7 @@
 # conductor
 
+> Windows 0.4.0: [Conductor 安装、多服务商配置、卸载和 DPI 说明](docs/windows-release-0.4.md)。
+
 Electron desktop client for Codex CLI and Claude Code. It keeps Electron focused on windowing, rendering, IPC, menus, and desktop integration, while the main-process business code is organized by domain: CLI bridges, Telegram integration, credential security, app controller, and renderer modules.
 
 ## Logo
@@ -126,3 +128,5 @@ npm run capture:docs
 ## License
 
 MIT, see [LICENSE](./LICENSE).
+
+- Preview 0.3: [本地中文流式语音输入 / Local streaming speech input](docs/voice-input.md).

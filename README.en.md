@@ -1,5 +1,7 @@
 # conductor (English)
 
+> Windows 0.4.0: [Conductor 安装、多服务商配置、卸载和 DPI 说明](docs/windows-release-0.4.md)。
+
 `conductor` is an Electron desktop client for Codex CLI and Claude Code. Electron owns windows, rendering, IPC, menus, and system integration; main-process business code is organized into CLI bridges, Telegram, security, app-controller, and renderer domains.
 
 ## Features
@@ -92,3 +94,5 @@ npm run capture:docs
 - Verified: Ubuntu 22.04
 - Verified: Windows development run
 - Not yet verified: macOS
+
+- Preview 0.3: [本地中文流式语音输入 / Local streaming speech input](docs/voice-input.md).

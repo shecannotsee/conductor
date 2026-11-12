@@ -1,5 +1,7 @@
 # 开发 / 调试 / 打包指南
 
+> Windows Preview 的四项 API 配置、私有运行环境和安装/卸载行为，见 [Windows Preview 指南](windows-preview.md)。
+
 ## 1. 环境
 
 - Node.js 18+
@@ -110,3 +112,7 @@ npm run dist:deb
 
 - `docs/architecture.md`
 - `src/README.md`
+
+## Preview 语音输入
+
+输入框旁的“语音输入”使用本地中文流式模型，无需 API Key。详见 [语音输入使用和跨平台部署](voice-input.md)。

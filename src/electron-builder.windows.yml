@@ -1,0 +1,59 @@
+appId: com.conductor.desktop
+productName: Conductor
+artifactName: "Conductor-${version}-${os}-${arch}.${ext}"
+directories:
+  output: ../dist/windows
+  buildResources: build
+files:
+  - app/**/*
+  - package.json
+extraResources:
+  - from: runtime
+    to: runtime
+    filter:
+      - "**/*"
+      - "!**/.cache/**/*"
+  - from: ../resource
+    to: resource
+  - from: scripts/windows/stop-runtime.ps1
+    to: stop-runtime.ps1
+  - from: scripts/windows/stop-installed-app.ps1
+    to: stop-installed-app.ps1
+  - from: scripts/windows/uninstall-data.ps1
+    to: uninstall-data.ps1
+asar: true
+win:
+  artifactName: "Conductor-${version}-win-${arch}-Setup.${ext}"
+  target:
+    - target: nsis
+      arch: [x64]
+  executableName: Conductor
+  icon: build/icon.png
+  signAndEditExecutable: false
+nsis:
+  installerLanguages: [zh_CN, en_US]
+  language: 2052
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  selectPerMachineByDefault: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Conductor
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false
+  include: scripts/windows/installer.nsh
+  uninstallDisplayName: Conductor
+
+mac:
+  target: [dmg]
+  category: public.app-category.developer-tools
+  extendInfo:
+    NSMicrophoneUsageDescription: 将你的语音在本机转成文字并输入对话框。
+  entitlements: scripts/macos/entitlements.plist
+  entitlementsInherit: scripts/macos/entitlements.plist
+linux:
+  target: [AppImage, deb]
+  category: Development
+  executableName: conductor

@@ -31,6 +31,7 @@ function main() {
   copyFile('renderer/index.html');
   copyFile('renderer/styles.css');
   copyDir('build');
+  copyDir('renderer/audio');
 }
 
 main();

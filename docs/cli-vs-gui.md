@@ -1,5 +1,7 @@
 # CLI 与 GUI 对照
 
+> Windows Preview 的四项 API 配置、私有运行环境和安装/卸载行为，见 [Windows Preview 指南](windows-preview.md)。
+
 Conductor 不替代 Codex CLI 或 Claude Code。它是桌面编排层，负责会话、状态、日志、通知和系统交互。
 
 | 能力 | Codex CLI / Claude Code | Conductor GUI |

@@ -30,6 +30,7 @@
                   <div class="quick-settings-detail-title quick-settings-root-title" data-i18n-key="quickSettings">设置</div>
                 </div>
                 <div class="quick-settings-detail-body quick-settings-root-body">
+                  <button id="open-codex-settings" type="button" class="quick-settings-category">API 设置 <span>›</span></button>
                   <button type="button" class="quick-settings-category" data-pane="conversation">
                     <span data-i18n-key="menuConversation">对话</span>
                     <span class="quick-settings-chevron">›</span>
@@ -492,6 +493,11 @@
       </section>
 
       <section class="input-row">
+        <div class="codex-profile-bar"><label for="conversation-codex-profile">API 配置</label><select id="conversation-codex-profile" aria-label="当前对话的 API 配置"></select><button id="manage-codex-profiles" type="button">管理配置</button><span id="codex-profile-status" role="status"></span></div>
+        <div id="speech-panel" class="speech-panel hidden" aria-live="polite">
+          <div class="speech-heading"><span id="speech-status">本地语音输入</span><button id="btn-speech-cancel" class="btn-secondary hidden" type="button">取消录音</button></div>
+          <div id="speech-partial" class="speech-partial"></div>
+        </div>
         <div id="composer-attachments" class="composer-attachments hidden" aria-live="polite"></div>
         <div class="composer-input-shell">
           <textarea id="input-box" wrap="soft" placeholder="输入消息，Ctrl+Enter 发送"></textarea>
@@ -521,6 +527,7 @@
               <span class="quick-settings-switch-knob"></span>
             </span>
           </button>
+          <button id="btn-speech" class="btn-secondary" type="button" aria-pressed="false" title="本地流式中文识别，录音不会上传">语音输入</button>
           <button id="btn-send">发送</button>
           <button id="btn-insert-message" class="hidden">插入对话</button>
           <button id="btn-retry-last">重试上一条</button>
@@ -757,6 +764,34 @@
     <button id="ctx-toggle-sidebar" type="button">隐藏左侧会话</button>
   </div>
 
+
+  <dialog id="codex-settings-dialog" class="codex-settings-dialog">
+    <form id="codex-settings-form">
+      <div class="codex-settings-heading"><div><small>CONDUCTOR</small><h2>API 设置</h2></div><button id="codex-settings-close" type="button" aria-label="关闭">×</button></div>
+      <p>填写 API 地址、Key、模型和推理强度，即可开始使用。</p>
+      <label for="codex-profile-editor">配置</label><select id="codex-profile-editor"></select>
+      <div class="codex-settings-actions"><button id="codex-profile-new" type="button">新增配置</button><button id="codex-profile-delete" type="button">删除配置</button></div>
+      <label for="codex-profile-name">配置名称</label><input id="codex-profile-name" required maxlength="80" placeholder="例如 A · Max / B · Medium" />
+      <label class="codex-check"><input id="codex-profile-default" type="checkbox" /> 用作新对话的默认配置</label>
+      <label for="codex-base-url">Base URL</label>
+      <input id="codex-base-url" type="url" required placeholder="https://magic666.top/v1" spellcheck="false" />
+      <label for="codex-api-key">API Key</label>
+      <input id="codex-api-key" type="password" autocomplete="new-password" placeholder="填写 API Key" />
+      <div class="codex-settings-key-row"><span id="codex-key-state">尚未配置</span><button id="codex-clear-key" type="button">清除已保存的 Key</button></div>
+      <label for="codex-model">模型名字</label>
+      <input id="codex-model" type="text" list="codex-model-options" required placeholder="选择或输入平台支持的模型名字" spellcheck="false" />
+      <datalist id="codex-model-options"></datalist>
+      <label for="codex-effort">推理强度</label>
+      <select id="codex-effort"></select>
+      <p id="codex-model-hint" class="codex-settings-note">模型可手动输入；第三方平台实际支持情况以连接测试为准。</p>
+      <p class="codex-settings-note">Key 保存在当前用户专属的认证文件中；界面不回显。测试连接会发送一次简短请求，可能产生少量费用。</p>
+      <div id="codex-settings-status" role="status" aria-live="polite"></div>
+      <div class="codex-settings-actions"><button id="codex-refresh-models" type="button">刷新候选模型</button><button id="codex-test" type="button">保存并测试</button><button id="codex-save" type="submit">保存配置</button></div>
+    </form>
+  </dialog>
+  <script type="module" src="./app/codex_settings_ui.js"></script>
+
   <script type="module" src="./app/bootstrap.js"></script>
+  <script type="module" src="./app/speech_input.js"></script>
 </body>
 </html>

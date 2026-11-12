@@ -22,7 +22,7 @@ const {
 const { emitUsageMeta } = require('./codex_runner_usage');
 
 class CodexAppServerRunner extends EventEmitter {
-  constructor({ commandText, prompt, workdir, sessionId = '', mode = 'start', goalObjective = '' }) {
+  constructor({ profileId = 'default', commandText, prompt, workdir, sessionId = '', mode = 'start', goalObjective = '' }) {
     super();
     this.commandText = commandText;
     this.prompt = prompt;
@@ -30,7 +30,8 @@ class CodexAppServerRunner extends EventEmitter {
     this.sessionId = sessionId;
     this.mode = mode === 'resume' || mode === 'fork' ? mode : 'start';
     this.goalObjective = String(goalObjective || '').trim();
-    this.childEnv = getCodexChildEnv();
+    this.profileId = profileId;
+    this.childEnv = getCodexChildEnv(profileId);
 
     this.proc = null;
     this.stopped = false;
@@ -59,12 +60,12 @@ class CodexAppServerRunner extends EventEmitter {
         turnId: this.activeTurnId,
       }).catch(() => {
         if (this.proc && !this.proc.killed) {
-          this.proc.kill('SIGTERM');
+          require('../child_process_helper').stopChildTree(this.proc);
         }
       });
       return;
     }
-    this.proc.kill('SIGTERM');
+    require('../child_process_helper').stopChildTree(this.proc);
   }
 
   async steer(text) {
@@ -99,6 +100,9 @@ class CodexAppServerRunner extends EventEmitter {
 
     try {
       const settings = parseAppServerCommandSettings(this.commandText, this.workdir);
+      const selected = require('../codex_settings').readSettings(this.profileId);
+      settings.model = selected.model;
+      settings.effort = selected.effort;
       const cmd = buildAppServerCommand(settings);
       this.emit('status', '正在启动 Codex...');
       this.emit('event', 'hint', `启动 app-server: ${cmd.join(' ')}`);
@@ -182,6 +186,7 @@ class CodexAppServerRunner extends EventEmitter {
         cwd: this.workdir,
         approvalPolicy: settings.approvalPolicy,
         sandboxPolicy: settings.sandboxPolicy,
+        effort: settings.effort,
         ...(settings.model ? { model: settings.model } : {}),
       }) as any;
 
@@ -230,7 +235,7 @@ class CodexAppServerRunner extends EventEmitter {
 
   _shutdownProcess() {
     if (this.proc && !this.proc.killed) {
-      this.proc.kill('SIGTERM');
+      require('../child_process_helper').stopChildTree(this.proc);
     }
     for (const { reject } of this.pendingRequests.values()) {
       reject(new Error('app-server 已结束'));

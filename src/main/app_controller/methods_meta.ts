@@ -88,7 +88,7 @@ const metaMethods = {
   },
 
   _extractModelFromConfigFile(parts) {
-    const codexHome = String(process.env.CODEX_HOME || '').trim() || path.join(os.homedir(), '.codex');
+    const codexHome = require('../preview_runtime').codexHome();
     const configPath = path.join(codexHome, 'config.toml');
     if (!fs.existsSync(configPath)) {
       return '';
@@ -317,6 +317,15 @@ const metaMethods = {
     const isClaude = lowerBin.includes('claude');
     if (!lowerBin.includes('codex') && !isClaude) {
       return { error: '当前命令不是 codex 或 claude，无法获取模型。', snapshot: this.snapshot() };
+    }
+
+    if (!isClaude) {
+      const profileId = require('../codex_profiles').forConversation(targetId);
+      const selected = require('../codex_settings').readSettings(profileId);
+      const model = selected.model || '-';
+      this._ensureMeta(targetId)['模型'] = model;
+      this._emit({ type: 'meta-updated', conversationId: targetId, key: '模型', value: model });
+      return this.snapshot();
     }
 
     let model = this._extractModelFromCommand(parts);

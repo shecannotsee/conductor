@@ -47,18 +47,13 @@ const {
 } = require('./state_store_codec');
 
 const APP_ROOT = resolveRepoRoot(__dirname);
-const DEFAULT_WORKDIR = path.join(APP_ROOT, 'conductor-workspace');
-const APP_DATA_DIR = path.join(APP_ROOT, '.conductor');
+const { dataDir, PREVIEW_NAME } = require('./preview_runtime');
+const DEFAULT_WORKDIR = require('./preview_runtime').workspaceDir();
+const APP_DATA_DIR = dataDir();
 const LEGACY_PROJECT_DATA_DIR = path.join(APP_ROOT, '.codexdesk');
 const LEGACY_HOME_DATA_DIR = path.join(os.homedir(), '.codexdesk');
-const LEGACY_STATE_PATHS = [
-  path.join(LEGACY_PROJECT_DATA_DIR, 'state.electron.json'),
-  path.join(LEGACY_HOME_DATA_DIR, 'state.electron.json'),
-];
-const LEGACY_SECRETS_PATHS = [
-  path.join(LEGACY_PROJECT_DATA_DIR, 'secrets.electron.json'),
-  path.join(LEGACY_HOME_DATA_DIR, 'secrets.electron.json'),
-];
+const LEGACY_STATE_PATHS = [];
+const LEGACY_SECRETS_PATHS = [];
 const DEFAULT_STATE_PATH = path.join(APP_DATA_DIR, 'state.electron.json');
 const MAX_PERSISTED_MESSAGES = 2000;
 const DEFAULT_DEVICE_IDENTITY = '';

@@ -1,5 +1,7 @@
 # 卸载指南
 
+> Windows 安装版：在“已安装的应用”中卸载 Conductor，可选择保留所有 API 配置或完全清理；workspace 默认保留，也可单独勾选删除。详见 [Windows 0.4.0 指南](windows-release-0.4.md)。
+
 ## 1. 卸载应用
 
 先确认包名：

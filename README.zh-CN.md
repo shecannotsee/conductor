@@ -1,5 +1,7 @@
 # conductor（中文）
 
+> Windows 0.4.0: [Conductor 安装、多服务商配置、卸载和 DPI 说明](docs/windows-release-0.4.md)。
+
 `conductor` 是 Codex CLI 和 Claude Code 的 Electron 桌面端。Electron 负责窗口、渲染、IPC、菜单和系统集成；主进程内部按领域拆分为 CLI 对接、Telegram 集成、凭据安全、应用控制器和渲染层模块。
 
 ## 核心能力
@@ -90,3 +92,5 @@ npm run capture:docs
 - 已验证：Ubuntu 22.04
 - 已验证：Windows development run
 - 未验证：macOS
+
+- Preview 0.3: [本地中文流式语音输入 / Local streaming speech input](docs/voice-input.md).

@@ -1,6 +1,6 @@
 {
   "name": "conductor",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Electron implementation of Conductor",
   "main": "app/main/main.js",
@@ -13,14 +13,30 @@
     "capture:docs": "npm run sync:logo && node scripts/run-doc-capture.js",
     "check": "tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.renderer.json --noEmit",
     "pack:dir": "npm run sync:logo && npx electron-builder@26.0.12 --dir --config electron-builder.yml",
-    "dist:deb": "npm run sync:logo && npx electron-builder@26.0.12 --linux deb --config electron-builder.yml"
+    "dist:deb": "npm run sync:logo && npx electron-builder@26.0.12 --linux deb --config electron-builder.yml",
+    "prepare:runtime": "node scripts/prepare-runtime.js",
+    "dist:win": "npm run dist:windows",
+    "dist:windows": "npm run prepare:runtime && npm run prepare:speech && npm run sync:logo && node scripts/build-windows.js",
+    "pack:preview": "npm run pack:windows",
+    "pack:windows": "npm run sync:logo && electron-builder --win --x64 --dir --config electron-builder.windows.yml",
+    "test:preview": "npm run build && node --test tests/preview.test.cjs && node tests/preview-connection.cjs",
+    "test:preview:ui": "node tests/preview-smoke.cjs",
+    "prepare:speech": "node --use-env-proxy scripts/prepare-speech.js",
+    "dist:mac": "npm run prepare:runtime && npm run prepare:speech && npm run sync:logo && electron-builder --mac --config electron-builder.windows.yml",
+    "dist:linux": "npm run prepare:runtime && npm run prepare:speech && npm run sync:logo && electron-builder --linux --config electron-builder.windows.yml",
+    "test:speech": "node --use-env-proxy scripts/prepare-speech-test.js && npm run build && node tests/speech.test.cjs",
+    "test:speech:ui": "node tests/speech-ui.cjs"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",
     "electron": "^37.2.0",
+    "electron-builder": "26.0.12",
+    "playwright-core": "1.56.1",
     "typescript": "^6.0.2"
   },
   "dependencies": {
-    "katex": "^0.16.45"
-  }
+    "katex": "^0.16.45",
+    "smol-toml": "1.3.4"
+  },
+  "productName": "Conductor"
 }

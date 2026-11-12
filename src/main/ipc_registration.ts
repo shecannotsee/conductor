@@ -42,6 +42,31 @@ function registerAppIpc({
   setAllowWindowClose,
   waitForRunnersStop,
 }) {
+  const { SpeechService } = require('./speech_service');
+  const speech = new SpeechService(payload => {
+    const window = getMainWindow();
+    if (window && !window.isDestroyed()) window.webContents.send('speech:event', payload);
+  });
+  app.on('before-quit', () => speech.dispose());
+  for (const [channel, operation] of [
+    ['speech:status', () => speech.status()],
+    ['speech:start', payload => speech.start(payload?.sampleRate)],
+    ['speech:audio', payload => speech.audio(payload?.sessionId, payload?.samples)],
+    ['speech:stop', payload => speech.finish(payload?.sessionId)],
+    ['speech:cancel', () => speech.dispose()],
+  ] as any[]) {
+    ipcMain.handle(channel, async (event, payload) => {
+      if (event.sender !== getMainWindow()?.webContents || event.senderFrame !== event.sender.mainFrame) return { ok: false, error: '无效的录音请求来源。' };
+      try { return { ok: true, value: await operation(payload) }; }
+      catch (error) { return { ok: false, error: error.message || '语音识别失败。' }; }
+    });
+  }
+  app.on('web-contents-created', (_, contents) => {
+    contents.on('render-process-gone', () => speech.dispose());
+    contents.on('destroyed', () => { if (!getMainWindow() || getMainWindow().isDestroyed()) speech.dispose(); });
+    contents.on('did-start-navigation', (_, url, _inPlace, isMainFrame) => { if (isMainFrame) speech.dispose(); });
+  });
+
   ipcMain.handle('ui:set-menu-language', async (_, payload) => {
     const language = applyMenuLanguage(payload?.language);
     return { ok: true, language };
@@ -73,6 +98,52 @@ function registerAppIpc({
   ipcMain.handle('ui:invoke-action', async (_, payload) => {
     return invokeUiAction(payload?.action);
   });
+
+  const codexSettings = require('./codex_settings');
+  const profiles = require('./codex_profiles');
+  let codexSettingsBusy = false;
+  for (const [channel, operation] of [
+    ['codex-settings:read', () => codexSettings.readSettings()],
+    ['codex-settings:save', payload => codexSettings.saveSettings(payload)],
+    ['codex-settings:models', payload => codexSettings.listModels(profiles.requireProfile(payload?.id || 'default'))],
+    ['codex-settings:test', payload => codexSettings.testConnection(profiles.requireProfile(payload?.id || 'default'))],
+    ['codex-profiles:list', payload => profiles.list(payload?.conversationId)],
+    ['codex-profiles:save', payload => {
+      const controller = getController();
+      if (payload?.id && Array.from(controller.runners.keys()).some(id => profiles.forConversation(id) === payload.id)) throw new Error('此配置正在执行任务，请结束后再修改。');
+      profiles.pinExisting(controller.conversations);
+      return profiles.save(payload);
+    }],
+    ['codex-profiles:delete', payload => { profiles.pinExisting(getController().conversations); return profiles.remove(payload?.id); }],
+    ['codex-profiles:bind', payload => {
+      const controller = getController();
+      const conv = controller.conversations.find(item => item.id === payload?.conversationId);
+      if (!conv) throw new Error('请选择对话。');
+      if (controller.runners.has(conv.id) || controller._pendingQueueSize(conv.id)) throw new Error('请等待此对话的任务和队列结束后再切换配置。');
+      const previous = profiles.forConversation(conv.id);
+      profiles.bind(conv.id, payload.id);
+      if (previous !== payload.id) {
+        conv.sessionId = ''; conv.sessionContinuationMode = '';
+        controller._ensureMeta(conv.id)['会话ID'] = '-';
+        controller._emit({ type: 'meta-updated', conversationId: conv.id, key: '会话ID', value: '-' });
+        controller.refreshModelInfo(conv.id);
+        controller._syncConversationUpdated(conv);
+        controller._persist();
+        controller._appendStructuredEvent(conv.id, 'hint', '已切换 API 配置，下次使用新的原生会话；本地聊天记录保留。');
+      }
+      return profiles.list(conv.id);
+    }],
+  ] as any[]) {
+    ipcMain.handle(channel, async (event, payload) => {
+      if (event.sender !== getMainWindow()?.webContents || event.senderFrame !== event.sender.mainFrame) return { ok: false, error: '无效的请求来源。' };
+      if (codexSettingsBusy) return { ok: false, error: '请等待当前配置操作完成。' };
+      if (channel === 'codex-settings:save' && getController().runningConversationCount() > 0) return { ok: false, error: '请等待运行中的任务结束后修改配置。' };
+      codexSettingsBusy = true;
+      try { return { ok: true, value: await operation(payload) }; }
+      catch (error) { return { ok: false, error: error.message || '配置操作失败。' }; }
+      finally { codexSettingsBusy = false; }
+    });
+  }
 
   ipcMain.handle('app:get-snapshot', async () => getController().snapshot());
 
@@ -138,7 +209,7 @@ function registerAppIpc({
 
     const result = await dialog.showOpenDialog(mainWindow, {
       title: '导入 CLI 会话',
-      defaultPath: path.join(os.homedir(), '.codex', 'sessions'),
+      defaultPath: path.join(require('./preview_runtime').codexHome(profiles.forConversation(controller.activeConversationId)), 'sessions'),
       properties: ['openFile'],
       filters: [
         { name: 'Conductor Session', extensions: ['jsonl'] },

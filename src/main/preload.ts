@@ -1,6 +1,24 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('codexdesk', {
+  speechStatus: () => ipcRenderer.invoke('speech:status'),
+  startSpeech: sampleRate => ipcRenderer.invoke('speech:start', { sampleRate }),
+  sendSpeechAudio: (sessionId, samples) => ipcRenderer.invoke('speech:audio', { sessionId, samples }),
+  stopSpeech: sessionId => ipcRenderer.invoke('speech:stop', { sessionId }),
+  cancelSpeech: () => ipcRenderer.invoke('speech:cancel'),
+  onSpeechEvent: callback => {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('speech:event', listener);
+    return () => ipcRenderer.removeListener('speech:event', listener);
+  },
+  readCodexSettings: () => ipcRenderer.invoke('codex-settings:read'),
+  saveCodexSettings: payload => ipcRenderer.invoke('codex-settings:save', payload),
+  listCodexModels: (id) => ipcRenderer.invoke('codex-settings:models', { id }),
+  testCodexConnection: (id) => ipcRenderer.invoke('codex-settings:test', { id }),
+  listCodexProfiles: (conversationId) => ipcRenderer.invoke('codex-profiles:list', { conversationId }),
+  saveCodexProfile: (payload) => ipcRenderer.invoke('codex-profiles:save', payload),
+  deleteCodexProfile: (id) => ipcRenderer.invoke('codex-profiles:delete', { id }),
+  bindCodexProfile: (conversationId, id) => ipcRenderer.invoke('codex-profiles:bind', { conversationId, id }),
   getAppInfo: () => ipcRenderer.invoke('app:get-info'),
   getSnapshot: () => ipcRenderer.invoke('app:get-snapshot'),
   getTelegramLogs: () => ipcRenderer.invoke('app:get-telegram-logs'),

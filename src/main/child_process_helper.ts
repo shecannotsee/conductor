@@ -77,7 +77,26 @@ function quoteCmdArg(value) {
 }
 
 function normalizeSpawnOptions(command, args: any[] = [], options: any = {}) {
-  const resolved = resolveCommand(command, options.env);
+  const isCodex = /^codex(?:\.exe|\.cmd|\.ps1)?$/i.test(path.basename(String(command)));
+  if (isCodex && ['exec', 'app-server'].includes(args[0])) {
+    const settings = require('./codex_settings');
+    const profileId = options.env?.CONDUCTOR_CODEX_PROFILE || 'default';
+    if (!settings.readSettings(profileId).configured) throw new Error('请先在 API 设置中保存模型和 API Key。');
+    // Profile settings take precedence over old per-conversation CLI options.
+    const cleaned = [];
+    const managed = /^(model|model_provider|model_reasoning_effort|cli_auth_credentials_store|model_providers(?:\.|\s*=))/;
+    for (let index = 0; index < args.length; index++) {
+      const token = String(args[index]);
+      if (token === '--') { cleaned.push(...args.slice(index)); break; }
+      if (['--model', '-m', '--profile', '-p'].includes(token)) { index++; continue; }
+      if (/^--(?:model|profile)=/.test(token)) continue;
+      if (['-c', '--config'].includes(token) && managed.test(String(args[index + 1] || ''))) { index++; continue; }
+      if (token.startsWith('--config=') && managed.test(token.slice(9))) continue;
+      cleaned.push(args[index]);
+    }
+    args = [...settings.configArgs(profileId), ...cleaned];
+  }
+  const resolved = isCodex ? require('./preview_runtime').codexBinary() : resolveCommand(command, options.env);
   if (requiresWindowsShell(resolved)) {
     const commandLine = `"${[resolved, ...args].map(quoteCmdArg).join(' ')}"`;
     return {
@@ -100,16 +119,36 @@ function normalizeSpawnOptions(command, args: any[] = [], options: any = {}) {
 }
 
 function spawnCommand(command, args = [], options: any = {}) {
-  const normalized = normalizeSpawnOptions(command, args, options);
-  return spawn(normalized.command, normalized.args, normalized.options);
+  const normalized = normalizeSpawnOptions(command, args, { windowsHide: true, ...options });
+  return trackChild(spawn(normalized.command, normalized.args, normalized.options));
 }
 
 function spawnSyncCommand(command, args = [], options: any = {}) {
-  const normalized = normalizeSpawnOptions(command, args, options);
+  const normalized = normalizeSpawnOptions(command, args, { windowsHide: true, ...options });
   return spawnSync(normalized.command, normalized.args, normalized.options);
 }
 
+const managedChildren = new Set<any>();
+function trackChild(child) {
+  managedChildren.add(child);
+  child.once('exit', () => managedChildren.delete(child));
+  child.once('error', () => managedChildren.delete(child));
+  return child;
+}
+function stopChildTree(child) {
+  if (!child) return;
+  if (child.pid && child.exitCode === null) {
+    if (process.platform === 'win32') {
+      try { require('node:child_process').execFileSync('taskkill.exe', ['/pid', String(child.pid), '/t', '/f'], { windowsHide: true, stdio: 'ignore', timeout: 5000 }); } catch { child.kill('SIGTERM'); }
+    } else child.kill('SIGTERM');
+  }
+  child.stdin?.destroy(); child.stdout?.destroy(); child.stderr?.destroy();
+}
+function terminateManagedChildren() {
+  for (const child of managedChildren) stopChildTree(child);
+}
 module.exports = {
+  trackChild, stopChildTree, terminateManagedChildren,
   resolveCommand,
   spawnCommand,
   spawnSyncCommand,

@@ -390,6 +390,20 @@ export interface GenericResult {
 }
 
 export interface CodexDeskApi {
+    speechStatus(): Promise<any>;
+    startSpeech(sampleRate: number): Promise<any>;
+    sendSpeechAudio(sessionId: string, samples: Float32Array): Promise<any>;
+    stopSpeech(sessionId: string): Promise<any>;
+    cancelSpeech(): Promise<any>;
+    onSpeechEvent(callback: (payload: any) => void): () => void;
+    readCodexSettings(): Promise<any>;
+    saveCodexSettings(payload: unknown): Promise<any>;
+    listCodexModels(id?: string): Promise<any>;
+    testCodexConnection(id?: string): Promise<any>;
+    listCodexProfiles(conversationId?: string): Promise<any>;
+    saveCodexProfile(payload: unknown): Promise<any>;
+    deleteCodexProfile(id: string): Promise<any>;
+    bindCodexProfile(conversationId: string, id: string): Promise<any>;
   getAppInfo(): Promise<Partial<AppInfo>>;
   getSnapshot(): Promise<AppSnapshot>;
   getTelegramLogs(): Promise<GenericResult>;

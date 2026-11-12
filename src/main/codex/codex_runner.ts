@@ -31,7 +31,7 @@ const {
 } = require('./codex_runner_output');
 
 class CodexRunner extends EventEmitter {
-  constructor({ commandText, prompt, attachments = [], workdir, sessionId = '', useNativeMemory = true }) {
+  constructor({ profileId = 'default', commandText, prompt, attachments = [], workdir, sessionId = '', useNativeMemory = true }) {
     super();
     this.commandText = commandText;
     this.prompt = prompt;
@@ -39,7 +39,8 @@ class CodexRunner extends EventEmitter {
     this.workdir = workdir;
     this.sessionId = sessionId;
     this.useNativeMemory = useNativeMemory;
-    this.childEnv = getCodexChildEnv();
+    this.profileId = profileId;
+    this.childEnv = getCodexChildEnv(profileId);
 
     this.proc = null;
     this.gotStreamDelta = false;
@@ -48,13 +49,14 @@ class CodexRunner extends EventEmitter {
     this.stopped = false;
     this.lastUsage = null;
     this.lastModel = '';
+    this.promptViaStdin = false;
   }
 
   stop() {
     this.stopped = true;
     if (this.proc && !this.proc.killed) {
       this.emit('status', '正在停止当前任务...');
-      this.proc.kill('SIGTERM');
+      require('../child_process_helper').stopChildTree(this.proc);
     }
   }
 
@@ -144,9 +146,17 @@ class CodexRunner extends EventEmitter {
     return new Promise((resolve) => {
       this.proc = spawnCommand(cmd[0], cmd.slice(1), {
         cwd: this.workdir || process.cwd(),
-        stdio: ['ignore', 'pipe', 'pipe'],
+        // Feed the prompt through stdin for codex exec. Passing large prompts as
+        // command-line arguments hits Windows' CreateProcess length limit.
+        stdio: ['pipe', 'pipe', 'pipe'],
         env: this.childEnv,
       });
+
+      if (this.proc.stdin && !this.proc.stdin.destroyed && this.promptViaStdin) {
+        this.proc.stdin.end(String(this.prompt || ''));
+      } else if (this.proc.stdin && !this.proc.stdin.destroyed) {
+        this.proc.stdin.end();
+      }
 
       const onLine = (line) => {
         const cleanLine = stripAnsi(line.trimEnd());
@@ -200,6 +210,7 @@ class CodexRunner extends EventEmitter {
   }
 
   _buildCommand(baseCmd, forceNewSession = false) {
+    this.promptViaStdin = false;
     const [normalized, isCodexExec] = normalizeBaseOptions(baseCmd);
     if (!isCodexExec) {
       this.emit('event', 'warn', '当前命令不是 `codex exec`，已退化为单次执行模式。');
@@ -218,7 +229,9 @@ class CodexRunner extends EventEmitter {
 
     if (this.useNativeMemory && this.sessionId && !forceNewSession) {
       this.emit('event', 'hint', `使用原生会话续聊: ${this.sessionId}`);
-      return [codexBin, 'exec', ...execOpts, ...imageArgs, 'resume', this.sessionId, '--', this.prompt];
+      const command = [codexBin, 'exec', ...execOpts, ...imageArgs, 'resume', this.sessionId, '--', '-'];
+      this.promptViaStdin = true;
+      return command;
     }
 
     if (this.useNativeMemory) {
@@ -227,7 +240,9 @@ class CodexRunner extends EventEmitter {
       this.emit('event', 'hint', '当前为本地拼接上下文模式（非原生会话）');
     }
 
-    return [codexBin, 'exec', ...execOpts, ...imageArgs, '--', this.prompt];
+    const command = [codexBin, 'exec', ...execOpts, ...imageArgs, '--', '-'];
+    this.promptViaStdin = true;
+    return command;
   }
 
   _emitPlanUpdateFromItem(eventType, item) {
