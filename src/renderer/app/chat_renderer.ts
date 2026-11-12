@@ -26,6 +26,10 @@ import {
 } from './conversation_runtime.js';
 import { runningStepMarkdown } from './runtime_renderer.js';
 
+let lastRenderedConversationId = '';
+let lastRenderedMessageCount = -1;
+let lastRenderedMessageSignature = '';
+
 interface ModelPricing {
   inputPerMillion: number;
   cachedInputPerMillion: number;
@@ -492,6 +496,9 @@ function renderChatTransientPanels(options: RenderTransientOptions = {}) {
 function renderChat(stickToBottom = true) {
   const conv = currentConversation();
   if (!conv) {
+    lastRenderedConversationId = '';
+    lastRenderedMessageCount = -1;
+    lastRenderedMessageSignature = '';
     el.chatView.innerHTML = [
       `<div class="tip" style="margin-top:28px;">${escapeHtml(t('emptyChatTip1'))}</div>`,
       `<div class="tip">${escapeHtml(t('emptyChatTip2'))}</div>`,
@@ -500,6 +507,9 @@ function renderChat(stickToBottom = true) {
     return;
   }
   if (!Array.isArray(conv.messages) || !conv.messages.length) {
+    lastRenderedConversationId = state.activeConversationId;
+    lastRenderedMessageCount = 0;
+    lastRenderedMessageSignature = '';
     el.chatView.innerHTML = [
       '<div class="chat-view-empty-shell">',
       `<div class="tip">${escapeHtml(t('noMessagesTip1'))}</div>`,
@@ -519,6 +529,30 @@ function renderChat(stickToBottom = true) {
   const visibleCount = ensureChatVisibleCount(state.activeConversationId, totalCount);
   const startIndex = Math.max(0, totalCount - visibleCount);
   const latestAssistantIndex = findLatestAssistantMessageIndex(conv);
+  const lastMessage = conv.messages[totalCount - 1];
+  const lastMessageSignature = JSON.stringify(lastMessage);
+
+  // Streaming updates usually change only the last assistant message. Keep the
+  // existing DOM and replace that row instead of rebuilding all visible Markdown.
+  if (
+    lastRenderedConversationId === state.activeConversationId
+    && lastRenderedMessageCount === totalCount
+    && lastRenderedMessageSignature !== lastMessageSignature
+  ) {
+    const history = el.chatView.querySelector('.chat-history-list');
+    const lastRow = history?.querySelector(`[data-msg-row-index="${totalCount - 1}"]`);
+    if (lastRow) {
+      const template = document.createElement('template');
+      template.innerHTML = renderChatMessageBlock(lastMessage, totalCount - 1, conv, latestAssistantIndex);
+      const replacement = template.content.firstElementChild;
+      if (replacement) {
+        lastRow.replaceWith(replacement);
+        renderChatTransientPanels({ stickToBottom });
+        lastRenderedMessageSignature = lastMessageSignature;
+        return;
+      }
+    }
+  }
   const blocks = conv.messages
     .slice(startIndex)
     .map((item, offset) => renderChatMessageBlock(item, startIndex + offset, conv, latestAssistantIndex));
@@ -533,6 +567,9 @@ function renderChat(stickToBottom = true) {
   if (stickToBottom) {
     el.chatView.scrollTop = el.chatView.scrollHeight;
   }
+  lastRenderedConversationId = state.activeConversationId;
+  lastRenderedMessageCount = totalCount;
+  lastRenderedMessageSignature = lastMessageSignature;
 }
 
 function isChatViewNearBottom(threshold = 72) {
