@@ -36,7 +36,7 @@ New-Item -ItemType Directory -Path (Join-Path $AppData 'codex\sessions') -Force 
 [IO.File]::WriteAllText((Join-Path $AppData 'codex\config.toml'), 'model="test-model"')
 Set-Content -LiteralPath (Join-Path $AppData 'codex\sessions\history.txt') -Value 'test history'
 Set-Content -LiteralPath (Join-Path $AppData 'state.electron.json') -Value 'test state'
-& node (Join-Path $PSScriptRoot 'preview-smoke.cjs') (Join-Path $InstallDir 'Conductor.exe')
+& node (Join-Path $PSScriptRoot 'windows-ui.test.cjs') (Join-Path $InstallDir 'Conductor.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Installed settings UI failed' }
 & node (Join-Path $PSScriptRoot 'speech-ui.cjs') (Join-Path $InstallDir 'Conductor.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Installed speech UI failed' }
