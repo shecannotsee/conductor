@@ -52,11 +52,20 @@ let sortedConversationCache: ConversationSummary[] = [];
 let conversationListCacheVersion = 0;
 let lastConversationListRenderSignature = '';
 let lastConversationListMode = 'conversation';
-const ROW_HEIGHT = 88;
+// Keep the virtual row stride in sync with the compact row and its 2px margin.
+const ROW_HEIGHT = 64;
 let virtualItems: ConversationSummary[] = [];
 let virtualSignature = '';
 let virtualBound = false;
+let listPointerActive = false;
+let listRefreshDeferred = false;
+function deferListRefreshDuringClick(): boolean {
+  if (!listPointerActive) return false;
+  listRefreshDeferred = true;
+  return true;
+}
 function paintConversationWindow() {
+  if (deferListRefreshDuringClick()) return;
   if (state.workspaceMode === 'team' || !virtualItems.length) return;
   const start = Math.max(0, Math.floor(el.conversationList.scrollTop / ROW_HEIGHT) - 5);
   const end = Math.min(virtualItems.length, start + Math.ceil((el.conversationList.clientHeight || 600) / ROW_HEIGHT) + 10);
@@ -322,6 +331,25 @@ function renderConversationListItem(item: ConversationSummary, activeId: string)
 function renderConversationList() {
   if (!virtualBound) {
     virtualBound = true;
+    el.conversationList.addEventListener('pointerdown', event => {
+      if (event.button !== 0) return;
+      const target = event.target instanceof Element ? event.target : null;
+      listPointerActive = Boolean(target?.closest('.conversation-item'));
+    }, { capture: true });
+    const finishListPointer = () => {
+      // Let the click event resolve its original row before applying stream updates.
+      setTimeout(() => {
+        listPointerActive = false;
+        if (!listRefreshDeferred) return;
+        listRefreshDeferred = false;
+        lastConversationListRenderSignature = '';
+        virtualSignature = '';
+        renderConversationList();
+      }, 0);
+    };
+    window.addEventListener('pointerup', finishListPointer, { capture: true });
+    window.addEventListener('pointercancel', finishListPointer, { capture: true });
+    window.addEventListener('blur', finishListPointer);
     let pending = false;
     el.conversationList.addEventListener('scroll', () => {
       if (pending) return;
@@ -330,6 +358,7 @@ function renderConversationList() {
     }, { passive: true });
     new ResizeObserver(() => paintConversationWindow()).observe(el.conversationList);
   }
+  if (deferListRefreshDuringClick()) return;
   if (state.workspaceMode === 'team') {
     lastConversationListMode = 'team';
     renderAgentTeamGroupList();
@@ -392,6 +421,7 @@ function updateConversationListActiveState(previousId: string, nextId: string): 
 }
 
 function patchConversationListItem(conversationId: string): boolean {
+  if (deferListRefreshDuringClick()) return true;
   const id = String(conversationId || '').trim();
   if (!id) {
     return false;

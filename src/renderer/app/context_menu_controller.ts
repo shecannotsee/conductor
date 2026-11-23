@@ -59,31 +59,6 @@ function hasSelectionText() {
   return String(currentSelectionText() || '').length > 0;
 }
 
-async function copyPlainText(text) {
-  const content = String(text || '');
-  if (!content) {
-    return;
-  }
-  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-    await navigator.clipboard.writeText(content);
-    return;
-  }
-  const helper = document.createElement('textarea');
-  helper.value = content;
-  helper.setAttribute('readonly', 'readonly');
-  helper.style.position = 'fixed';
-  helper.style.opacity = '0';
-  helper.style.pointerEvents = 'none';
-  document.body.appendChild(helper);
-  helper.focus();
-  helper.select();
-  try {
-    document.execCommand('copy');
-  } finally {
-    document.body.removeChild(helper);
-  }
-}
-
 export function createContextMenuController(options: ContextMenuOptions) {
   const sessionFileButton = document.createElement('button');
   sessionFileButton.type = 'button';
@@ -380,7 +355,11 @@ export function createContextMenuController(options: ContextMenuOptions) {
         if (!text) {
           return;
         }
-        await copyPlainText(text).catch(() => {});
+        try {
+          await codexdesk.copyText(text);
+        } catch (error) {
+          window.alert(`复制失败，请重试：${error?.message || String(error)}`);
+        }
       });
     }
     if (el.ctxToggleSidebar) {

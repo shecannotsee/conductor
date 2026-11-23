@@ -200,7 +200,6 @@ const el: UiElementRefs = {
   btnAddImageAttachment: queryById<HTMLButtonElement>('btn-add-image-attachment'),
   composerResizeHandle: queryById<HTMLElement>('composer-resize-handle'),
   sendRow: queryById<HTMLElement>('send-row'),
-  btnSendGoal: queryById<HTMLButtonElement>('btn-send-goal'),
   btnSend: queryById<HTMLButtonElement>('btn-send'),
   btnInsertMessage: queryById<HTMLButtonElement>('btn-insert-message'),
   btnRetryLast: queryById<HTMLButtonElement>('btn-retry-last'),

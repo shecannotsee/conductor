@@ -10,6 +10,12 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
+  <header class="window-titlebar">
+    <span class="window-titlebar-brand">Conductor</span>
+    <div id="current-time-chip" class="meta-chip current-time-chip" title="UTC+08:00">
+      <span id="current-time-value">-</span>
+    </div>
+  </header>
   <div id="app-root" class="app-root">
     <aside class="sidebar">
       <div class="sidebar-header">
@@ -412,6 +418,11 @@
           <span id="chat-title-text" class="chat-title-text">-</span>
           <span id="chat-title-goal-badge" class="goal-badge chat-title-goal-badge hidden" title="Goal mode">Goal</span>
         </div>
+        <div id="composer-workdir" class="composer-workdir hidden" aria-live="polite">
+          <span id="label-composer-workdir" class="composer-workdir-label">会话目录:</span>
+          <svg class="workdir-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10H3Z" /></svg>
+          <button id="composer-workdir-value" class="composer-workdir-value" type="button" title="-">-</button>
+        </div>
         <div id="model-meta-chip" class="meta-chip model-meta-chip">
           <button id="btn-meta-model" class="meta-link-button" type="button">
             <span id="label-meta-model">模型</span>: <span id="meta-model-value">-</span>
@@ -493,8 +504,8 @@
         </div>
       </section>
 
+      <div class="composer-card">
       <section class="input-row">
-        <div class="codex-profile-bar"><label for="conversation-codex-profile">API 配置</label><select id="conversation-codex-profile" aria-label="当前对话的 API 配置"></select><button id="manage-codex-profiles" type="button">管理配置</button><span id="codex-profile-status" role="status"></span></div>
         <div id="speech-panel" class="speech-panel hidden" aria-live="polite">
           <div class="speech-heading"><span id="speech-status">本地语音输入</span><button id="btn-speech-cancel" class="btn-secondary hidden" type="button">取消录音</button></div>
           <div id="speech-partial" class="speech-partial"></div>
@@ -507,14 +518,7 @@
       </section>
 
       <section id="send-row" class="send-row">
-        <div id="composer-workdir" class="composer-workdir hidden" aria-live="polite">
-          <span id="label-composer-workdir" class="composer-workdir-label">会话目录:</span>
-          <button id="composer-workdir-value" class="composer-workdir-value" type="button" title="-">-</button>
-        </div>
         <div class="composer-actions">
-          <div id="current-time-chip" class="meta-chip current-time-chip" title="UTC+08:00">
-            <span id="current-time-value">-</span>
-          </div>
           <div class="attachment-picker">
             <input id="attachment-input" type="file" accept="image/*" multiple hidden />
             <button id="btn-add-attachment" class="btn-secondary" type="button">添加附件</button>
@@ -522,20 +526,18 @@
               <button id="btn-add-image-attachment" class="attachment-kind-option" type="button">图片</button>
             </div>
           </div>
-          <button id="btn-send-goal" class="send-goal-toggle hidden" type="button" aria-pressed="false" aria-label="Goal">
-            <span class="send-goal-toggle-label" data-i18n-key="goalMode">Goal</span>
-            <span class="quick-settings-switch" aria-hidden="true">
-              <span class="quick-settings-switch-knob"></span>
-            </span>
-          </button>
           <button id="btn-speech" class="btn-secondary" type="button" aria-pressed="false" title="本地流式中文识别，录音不会上传">语音输入</button>
-          <button id="btn-send">发送</button>
           <button id="btn-insert-message" class="hidden">插入对话</button>
           <button id="btn-retry-last">重试上一条</button>
           <button id="btn-stop">停止</button>
           <button id="btn-add-team-role" class="hidden" type="button">添加角色</button>
+          <button id="btn-send" title="Ctrl+Enter">发送</button>
         </div>
       </section>
+      </div>
+      <footer class="composer-footer">
+        <div class="codex-profile-bar"><label for="conversation-codex-profile">API 配置</label><select id="conversation-codex-profile" aria-label="当前对话的 API 配置"></select><button id="manage-codex-profiles" type="button">管理配置</button><span id="codex-profile-status" role="status"></span></div>
+      </footer>
     </main>
   </div>
   <div id="quick-settings-scrim" class="quick-settings-scrim hidden"></div>

@@ -42,6 +42,13 @@ function registerAppIpc({
   setAllowWindowClose,
   waitForRunnersStop,
 }) {
+  ipcMain.handle('clipboard:write-text', (event, text) => {
+    if (event.sender !== getMainWindow()?.webContents || event.senderFrame !== event.sender.mainFrame) {
+      throw new Error('无效的剪贴板请求来源。');
+    }
+    if (typeof text !== 'string') throw new Error('复制内容必须是文本。');
+    require('electron').clipboard.writeText(text, 'clipboard');
+  });
   const { SpeechService } = require('./speech_service');
   const speech = new SpeechService(payload => {
     const window = getMainWindow();

@@ -392,6 +392,7 @@ export interface GenericResult {
 }
 
 export interface CodexDeskApi {
+    copyText(text: string): Promise<void>;
     speechStatus(): Promise<any>;
     startSpeech(sampleRate: number): Promise<any>;
     sendSpeechAudio(sessionId: string, samples: Float32Array): Promise<any>;
@@ -634,7 +635,6 @@ export interface UiElementRefs {
   btnAddImageAttachment: HTMLButtonElement;
   composerResizeHandle: HTMLElement;
   sendRow: HTMLElement;
-  btnSendGoal: HTMLButtonElement;
   btnSend: HTMLButtonElement;
   btnInsertMessage: HTMLButtonElement;
   btnRetryLast: HTMLButtonElement;

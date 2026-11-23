@@ -6811,5 +6811,61 @@ html[data-theme='dark'] .raw-event-json {
 .codex-profile-bar { display:flex; align-items:center; gap:8px; padding:4px 0 8px; font-size:12px; flex-wrap:wrap; }
 .codex-profile-bar select { max-width:360px; padding:5px; background:var(--bg-secondary, #fff); color:inherit; border:1px solid #8886; border-radius:6px; }
 .codex-profile-bar button { padding:5px 9px; border:1px solid #8886; border-radius:6px; cursor:pointer; }
+
+/* Compact conversations and a quiet, two-level message composer. */
+.conversation-item { padding: 7px 10px; gap: 10px; border-radius: 9px; }
+.conversation-avatar { width: 36px; height: 36px; font-size: 14px; }
+.conversation-bottom-row { margin-top: 3px; }
+.conversation-title-text { font-size: 13px; }
+.conversation-preview { font-size: 12px; }
+.conversation-time { font-size: 10px; }
+body { display: flex; flex-direction: column; }
+.app-root { flex: 1; height: auto; min-height: 0; }
+.window-titlebar { position: relative; display: flex; align-items: center; flex: 0 0 env(titlebar-area-height, 36px); height: env(titlebar-area-height, 36px); min-height: 28px; padding: 0 160px; background: #f8fbff; border-bottom: 1px solid #72889d18; -webkit-app-region: drag; user-select: none; }
+.window-titlebar-brand { position: absolute; left: 14px; font: 500 12px 'Segoe UI', sans-serif; color: #536c82; }
+.window-titlebar .current-time-chip { margin: 0 auto; pointer-events: none; }
+html[data-theme='dark'] .window-titlebar { background: #0f172a; }
+html[data-theme='dark'] .window-titlebar-brand { color: #a7bbce; }
+.window-titlebar .current-time-chip { font-size: 12px; font-weight: 500; min-height: 24px; color: #708296; letter-spacing: .04em; }
+.composer-card { flex-shrink: 0; border: 1px solid #ccd9e5; border-radius: 16px; background: #fff; box-shadow: 0 3px 16px #29445f08; transition: border-color .15s, box-shadow .15s; }
+.composer-card:focus-within { border-color: #82b6e6; box-shadow: 0 0 0 3px #3390ec0d; }
+.composer-card .input-row { padding: 0 14px; }
+.composer-card #input-box { display: block; background: transparent; border: 0; border-radius: 0; box-shadow: none; outline: none; padding: 10px 2px; min-height: 88px; }
+.composer-card .send-row { padding: 8px 12px 10px; }
+.composer-card .composer-actions { width: 100%; margin: 0; justify-content: flex-start; gap: 6px; }
+.composer-actions > #btn-send { margin-left: auto; order: 10; min-width: 86px; border-radius: 10px; background: #2785df; font-weight: 600; }
+.composer-actions > #btn-send:hover:not(:disabled) { background: #1875ce; }
+.composer-card .send-row button { min-height: 34px; border-radius: 9px; font-size: 12px; font-weight: 500; }
+.composer-card #btn-add-attachment, .composer-card #btn-speech { background: transparent; border-color: transparent; color: #536c82; }
+.composer-card #btn-add-attachment:hover:not(:disabled), .composer-card #btn-speech:hover:not(:disabled) { background: #edf3f9; }
+.composer-card #btn-speech[aria-pressed='true'] { color: #b3261e; background: #b3261e12; }
+.composer-card #btn-stop:disabled, .composer-card #btn-retry-last:disabled { display: none; }
+.composer-card .speech-panel { margin: 10px 0 0; }
+.composer-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; flex-shrink: 0; padding: 0 4px 2px; }
+.composer-footer .codex-profile-bar { gap: 6px; padding: 0; margin: 0; font-size: 11px; color: #708296; min-width: 0; }
+.composer-footer .codex-profile-bar select { max-width: 180px; min-height: 28px; font-size: 11px; background: transparent; border-color: transparent; }
+.composer-footer .codex-profile-bar button { background: transparent; color: #536c82; border-color: transparent; min-height: 28px; font-size: 11px; }
+.composer-footer .codex-profile-bar button:hover { background: #e8f0f8; }
+.focus-row .chat-title { margin-right: 0; }
+.focus-row .composer-workdir { margin: 0 auto 0 0; flex: 0 1 auto; max-width: 200px; font-size: 11px; gap: 6px; padding: 4px 8px; border: 1px solid #72889d24; border-radius: 6px; background: #72889d08; }
+.workdir-icon { width: 13px; height: 13px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; opacity: .75; }
+.focus-row .composer-workdir:hover { background: #3390ec0c; border-color: #3390ec30; }
+.focus-row .composer-workdir-label { display: none; }
+.focus-row .composer-workdir-value { font-size: inherit; color: #708296; }
+.composer-card button:focus-visible, .composer-footer button:focus-visible, .composer-footer select:focus-visible { outline: 2px solid #3390ec; outline-offset: 2px; }
+html[data-theme='dark'] .composer-card { background: #17212b; border-color: #364859; box-shadow: none; }
+html[data-theme='dark'] .composer-card:focus-within { border-color: #528cc2; }
+html[data-theme='dark'] .composer-card #input-box { background: transparent; }
+html[data-theme='dark'] .composer-card #btn-add-attachment,
+html[data-theme='dark'] .composer-card #btn-speech,
+html[data-theme='dark'] .composer-footer .codex-profile-bar button { color: #a7bbce; }
+html[data-theme='dark'] .composer-card #btn-add-attachment:hover:not(:disabled),
+html[data-theme='dark'] .composer-card #btn-speech:hover:not(:disabled),
+html[data-theme='dark'] .composer-footer .codex-profile-bar button:hover { background: #25394b; }
+html[data-theme='dark'] .composer-footer select option { background: #17212b; color: #dbe4f0; }
+@media (max-width: 1200px) {
+  .focus-row .composer-workdir { max-width: 150px; }
+  .composer-card .send-row button { padding: 0 10px; }
+}
 .codex-settings-dialog .codex-check { display:flex; align-items:center; gap:8px; font-size:13px; }
 .codex-settings-dialog .codex-check input { width:auto; }

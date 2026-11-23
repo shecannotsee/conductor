@@ -3,7 +3,6 @@ import {
   draftStorageKey,
   el,
   getComposerAttachments,
-  isGoalModeEnabled,
   localizeKnownText,
   setComposerAttachments,
   setGoalModeEnabled,
@@ -25,14 +24,6 @@ import { appendAgentTeamUserMessage, currentAgentTeamGroup } from './agent_team.
 function isClaudeConversation() {
   const conv = currentConversation();
   return String(conv?.provider || state.settings.provider || '').trim().toLowerCase() === 'claude';
-}
-
-function isGoalModeAvailable() {
-  if (state.workspaceMode !== 'conversation') {
-    return false;
-  }
-  const conv = currentConversation();
-  return String(conv?.provider || state.settings.provider || '').trim().toLowerCase() === 'codex';
 }
 
 type ComposerControllerOptions = {
@@ -111,15 +102,6 @@ export function bindComposerController(options: ComposerControllerOptions) {
     el.attachmentInput.value = '';
   });
 
-  el.btnSendGoal.addEventListener('click', () => {
-    if (!isGoalModeAvailable()) {
-      return;
-    }
-    const next = !isGoalModeEnabled(state.activeConversationId);
-    setGoalModeEnabled(state.activeConversationId, next);
-    options.renderAll();
-  });
-
   el.btnSend.addEventListener('click', async () => {
     const text = el.inputBox.value.trim();
     if (state.workspaceMode === 'team') {
@@ -141,10 +123,9 @@ export function bindComposerController(options: ComposerControllerOptions) {
     if (!text) {
       return;
     }
-    const goalMode = isGoalModeEnabled(state.activeConversationId) && isGoalModeAvailable();
     try {
       const result = await codexdesk.sendMessage(state.activeConversationId, text, attachments, {
-        goalMode,
+        goalMode: false,
       });
       if (result?.error) {
         window.alert(localizeKnownText(result.error));

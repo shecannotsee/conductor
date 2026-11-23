@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('codexdesk', {
+  copyText: (text) => ipcRenderer.invoke('clipboard:write-text', text),
   speechStatus: () => ipcRenderer.invoke('speech:status'),
   startSpeech: sampleRate => ipcRenderer.invoke('speech:start', { sampleRate }),
   sendSpeechAudio: (sessionId, samples) => ipcRenderer.invoke('speech:audio', { sessionId, samples }),

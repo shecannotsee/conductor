@@ -140,6 +140,10 @@ function createWindow() {
   const icon = resolveAppIconPath();
   mainWindow = new BrowserWindow({
     title: 'Conductor',
+    ...(process.platform === 'win32' ? {
+      titleBarStyle: 'hidden',
+      titleBarOverlay: { color: '#f8fbff', symbolColor: '#223244', height: 36 },
+    } : {}),
     width: 1460,
     height: 920,
     minWidth: 1100,

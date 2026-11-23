@@ -26,7 +26,8 @@ function renderComposerWorkdir() {
   const workdir = String(conv?.workdir || '').trim();
   el.labelComposerWorkdir.textContent = `${t('composerWorkdir')}:`;
   el.composerWorkdir.classList.toggle('hidden', !workdir);
-  el.composerWorkdirValue.textContent = workdir || '-';
+  const directoryName = workdir.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || workdir;
+  el.composerWorkdirValue.textContent = directoryName || '-';
   el.composerWorkdirValue.title = workdir || '-';
   if (workdir) {
     el.composerWorkdirValue.setAttribute('data-open-path', encodeURIComponent(workdir));

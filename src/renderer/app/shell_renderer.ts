@@ -1,7 +1,6 @@
 import {
   currentLang,
   el,
-  isGoalModeEnabled,
   state,
   t,
 } from './state_i18n.js';
@@ -174,11 +173,6 @@ function renderHeader() {
 function renderRunButtons() {
   if (state.workspaceMode === 'team') {
     const hasGroup = Boolean(currentAgentTeamGroup());
-    if (el.btnSendGoal) {
-      el.btnSendGoal.classList.add('hidden');
-      el.btnSendGoal.disabled = true;
-      el.btnSendGoal.setAttribute('aria-pressed', 'false');
-    }
     el.btnSend.disabled = !hasGroup;
     el.btnSend.textContent = t('send');
     el.btnInsertMessage.classList.add('hidden');
@@ -219,18 +213,6 @@ function renderRunButtons() {
   const running = isConversationRunning(state.activeConversationId);
   const canInsert = running && hasConv && !isClaudeConversation;
   const canUseAttachments = hasConv && !isClaudeConversation;
-  const canUseGoal = hasConv && !isClaudeConversation;
-  const goalEnabled = Boolean(canUseGoal && isGoalModeEnabled(state.activeConversationId));
-  if (el.btnSendGoal) {
-    el.btnSendGoal.classList.toggle('hidden', !hasConv);
-    el.btnSendGoal.classList.toggle('active', goalEnabled);
-    el.btnSendGoal.disabled = !canUseGoal;
-    el.btnSendGoal.setAttribute('aria-pressed', goalEnabled ? 'true' : 'false');
-    el.btnSendGoal.setAttribute('aria-label', t('goalMode'));
-    el.btnSendGoal.title = canUseGoal
-      ? (goalEnabled ? t('goalModeDisableTooltip') : t('goalModeEnableTooltip'))
-      : t('goalModeUnavailableTooltip');
-  }
   el.btnSend.disabled = !hasConv;
   el.btnSend.textContent = running ? t('queueSend') : t('send');
   el.btnInsertMessage.disabled = !canInsert;
