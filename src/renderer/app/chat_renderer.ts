@@ -25,6 +25,7 @@ import {
   resolveMessageMarkdownEnabled,
 } from './conversation_runtime.js';
 import { runningStepMarkdown } from './runtime_renderer.js';
+import { renderExecution, renderReplyCopy } from './execution_renderer.js';
 
 let lastRenderedConversationId = '';
 let lastRenderedMessageCount = -1;
@@ -389,6 +390,8 @@ function renderRunningHintBlock(conversationId: string): string {
     return '';
   }
   const stepMarkdown = runningStepMarkdown(conversationId);
+  const conv = currentConversation();
+  if (conv?.messages?.[conv.messages.length - 1]?.execution?.status === 'running') return '';
   return [
     '<div class="msg-block msg-assistant-row msg-running-row">',
     '<div class="msg-running-panel">',
@@ -460,11 +463,17 @@ function renderChatMessageBlock(
     ? renderMarkdownLike(item.text)
     : `<div class="msg-plain-text">${escapeHtml(String(item.text || ''))}</div>`;
   const renderToggle = `<button type="button" class="msg-toggle-render" data-msg-index="${escapeHtml(index)}" aria-pressed="${markdownEnabled ? 'true' : 'false'}" ${collapsed ? 'disabled' : ''}>${escapeHtml(renderToggleText)}</button>`;
+  const processHtml = renderExecution(item, conversation, index);
+  if (item.execution && !item.text.trim()) {
+    return `<div class="msg-block msg-assistant-row" data-msg-row-index="${index}">${processHtml}</div>`;
+  }
   return [
     `<div class="msg-block ${rowClass}" data-msg-row-index="${escapeHtml(index)}">`,
+    processHtml,
     '<div class="msg-head">',
-    `<div class="msg-role">${escapeHtml(role)}${goalBadge}</div>`,
+    `<div class="msg-role">${escapeHtml(role)}${goalBadge}${item.execution ? `<span class="reply-result-label">${item.execution.hasFinal ? (currentLang() === 'en-US' ? 'Final reply' : '最终答复') : (currentLang() === 'en-US' ? 'Reply' : '答复')}</span>` : ''}</div>`,
     '<div class="msg-actions">',
+    renderReplyCopy(item, index),
     renderToggle,
     `<button type="button" class="msg-toggle-collapse" data-msg-index="${escapeHtml(index)}" aria-expanded="${collapsed ? 'false' : 'true'}">${escapeHtml(toggleText)}</button>`,
     '</div>',

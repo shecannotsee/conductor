@@ -93,8 +93,10 @@ function parseMessages(rawMessages) {
     }
     const role = String(item.role || '').trim();
     const text = String(item.text || '');
-    if ((role === 'user' || role === 'assistant') && text) {
+    const execution = role === 'assistant' ? require('./execution_codec').normalizeExecution(item.execution) : undefined;
+    if ((role === 'user' || role === 'assistant') && (text || execution?.steps.length)) {
       const message: any = { role, text };
+      if (execution) message.execution = execution;
       if (item.model) message.model = String(item.model);
       if (item.reasoningEffort) message.reasoningEffort = String(item.reasoningEffort);
       const rawUsage = item.usage;

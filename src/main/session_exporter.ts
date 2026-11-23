@@ -60,6 +60,7 @@ function buildMessageRecord(message) {
       type: 'message',
       role,
       text,
+      ...(message.execution ? { execution: message.execution } : {}),
       ...(message.model ? { model: String(message.model) } : {}),
       ...(message.reasoningEffort ? { reasoningEffort: String(message.reasoningEffort) } : {}),
       ...(usage ? { usage } : {}),
@@ -91,7 +92,7 @@ function exportConversationJsonl(filePath, conversation, meta: any = {}, options
   }
 
   const messages = Array.isArray(conversation.messages)
-    ? conversation.messages.filter((item) => item && String(item.text || '').trim())
+    ? conversation.messages.filter((item) => item && (String(item.text || '').trim() || item.execution?.steps?.length))
     : [];
   if (!messages.length) {
     throw new Error('当前会话没有可导出的消息');

@@ -12,6 +12,33 @@ function bindChatRunnerEvents(controller, {
   userText,
   enableStreamPreview = false,
 }) {
+  const execution = { id: require('node:crypto').randomUUID(), status: 'running', startedAt: nowTs(), completedAt: 0, hasFinal: false, steps: [] };
+  let segmentedMessage = null;
+  let segmentTimer = null;
+  let segments = [];
+  const publishSegments = () => {
+    segmentTimer = null;
+    const conv = getConversation(controller.conversations, targetId);
+    if (!conv) return;
+    execution.steps = segments.filter(item => item.phase === 'commentary' && item.text.trim()).map(item => ({ id: item.id, text: item.text }));
+    execution.hasFinal = segments.some(item => item.phase === 'final' && item.text.trim());
+    const text = segments.filter(item => item.phase !== 'commentary').map(item => item.text).filter(Boolean).join('\n\n');
+    if (!text && !execution.steps.length) return;
+    if (!segmentedMessage) {
+      segmentedMessage = { role: 'assistant', text: '', createdAt: nowTs(), execution };
+      conv.messages.push(segmentedMessage);
+    }
+    segmentedMessage.text = text;
+    controller.assistantBufferByRunner.set(runner, text);
+    conv.updatedAt = nowTs();
+    controller._syncConversationUpdated(conv);
+    controller._schedulePersist();
+  };
+  runner.on('assistant_segments', items => {
+    controller._markRequestWaitNoticeResponded(runner);
+    segments = items;
+    if (!segmentTimer) segmentTimer = setTimeout(publishSegments, 120);
+  });
   runner.on('status', (phase) => {
     controller._setPhase(targetId, phase);
   });
@@ -53,6 +80,7 @@ function bindChatRunnerEvents(controller, {
   });
 
   runner.on('assistant_delta', (delta) => {
+    if (runner.supportsAssistantSegments) return;
     controller._markRequestWaitNoticeResponded(runner);
     const current = controller.assistantBufferByRunner.get(runner) || '';
     const next = current + String(delta || '');
@@ -63,6 +91,7 @@ function bindChatRunnerEvents(controller, {
   });
 
   runner.on('assistant_update', (payload) => {
+    if (runner.supportsAssistantSegments) return;
     controller._markRequestWaitNoticeResponded(runner);
     const text = normalizeAssistantRuntimeText(payload?.text || '');
     if (!text) {
@@ -128,6 +157,12 @@ function bindChatRunnerEvents(controller, {
   });
 
   runner.on('finished', (result) => {
+    if (segmentTimer) { clearTimeout(segmentTimer); segmentTimer = null; }
+    if (runner.supportsAssistantSegments) {
+      execution.status = runner.stopped ? 'interrupted' : result.exitCode === 0 ? 'completed' : 'failed';
+      execution.completedAt = nowTs();
+      publishSegments();
+    }
     const targetConv = getConversation(controller.conversations, targetId);
     const runtimeState = controller.runtimeStore.ensure(targetId);
     const currentRound = Math.max(1, controller.roundIndexByRunner.get(runner) || 1);
@@ -143,7 +178,9 @@ function bindChatRunnerEvents(controller, {
       }
     }
 
-    const finalText = (controller.assistantBufferByRunner.get(runner) || '').trim() || String(result.assistantText || '').trim();
+    const finalText = runner.supportsAssistantSegments && segments.length
+      ? String(segmentedMessage?.text || '').trim()
+      : (controller.assistantBufferByRunner.get(runner) || '').trim() || String(result.assistantText || '').trim();
     controller._sealAssistantProgressSegments(targetId, currentRound);
     while (controller._removeLastStructuredEventIf(
       targetId,
@@ -162,14 +199,16 @@ function bindChatRunnerEvents(controller, {
         result?.usage,
         String(result?.model || '').trim() || metaModel,
       ) || normalizeMessageUsageFromMeta(controller._ensureMeta(targetId));
-      targetConv.messages.push({
+      const reply = {
         role: 'assistant',
         text: finalText,
         model: String(result?.model || runner.replyIdentity?.model || messageUsage?.model || ''),
         reasoningEffort: String(runner.replyIdentity?.reasoningEffort || ''),
         ...(messageUsage ? { usage: messageUsage } : {}),
         createdAt: nowTs(),
-      });
+      };
+      if (segmentedMessage) Object.assign(segmentedMessage, reply);
+      else targetConv.messages.push(reply);
     } else if (!finalText && targetConv && result.exitCode === 0) {
       controller._appendStructuredEvent(targetId, 'warn', 'Codex 未返回可解析内容（请查看右侧运行步骤/事件原文）');
     }

@@ -41,6 +41,8 @@ class CodexAppServerRunner extends EventEmitter {
     this.pendingTurn = null;
     this.finishedEmitted = false;
     this.assistantChunks = [];
+    this.supportsAssistantSegments = true;
+    this.assistantSegments = new (require('./assistant_segments').AssistantSegments)();
     this.lastAssistantUpdateText = '';
     this.threadId = sessionId;
     this.activeTurnId = '';
@@ -399,6 +401,9 @@ class CodexAppServerRunner extends EventEmitter {
     if (method === 'item/agentMessage/delta') {
       const delta = String(params?.delta || '');
       if (delta) {
+        this.emit('assistant_segments', this.assistantSegments.update(
+          `${params?.turnId || this.activeTurnId}:${params?.itemId || 'unidentified'}`, { delta },
+        ));
         this.assistantChunks.push(delta);
         this.emit('assistant_delta', delta);
         this.emit('status', '正在输出回复...');
@@ -409,6 +414,14 @@ class CodexAppServerRunner extends EventEmitter {
     if (method === 'item/started' || method === 'item/completed') {
       const item = params?.item;
       if (item && typeof item === 'object') {
+        const type = toSnakeCase(item.type || '');
+        if (['agent_message', 'assistant_message', 'assistant'].includes(type) || (type === 'message' && item.role === 'assistant')) {
+          const text = extractItemMessageText(item);
+          this.emit('assistant_segments', this.assistantSegments.update(
+            `${params?.turnId || this.activeTurnId}:${item.id || 'unidentified'}`,
+            { phase: item.phase, channel: item.channel, ...(method === 'item/completed' || text ? { text } : {}) },
+          ));
+        }
         const eventType = method === 'item/started' ? 'item.started' : 'item.completed';
         this._emitItemStep(eventType, item);
         this._emitAssistantUpdate(eventType, item);

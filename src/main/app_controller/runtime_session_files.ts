@@ -117,7 +117,7 @@ const runtimeSessionFileMethods = {
       throw new Error('会话不存在');
     }
     const messages = Array.isArray(conv.messages)
-      ? conv.messages.filter((item) => item && String(item.text || '').trim())
+      ? conv.messages.filter((item) => item && (String(item.text || '').trim() || item.execution?.steps?.length))
       : [];
     if (!messages.length) {
       throw new Error('当前会话没有可导出的消息');

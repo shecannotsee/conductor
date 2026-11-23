@@ -1,0 +1,65 @@
+const { _electron: electron } = require('playwright-core');
+const assert = require('node:assert/strict');
+const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
+(async () => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'conductor-execution-ui-'));
+  const data = path.join(temp, 'ConductorInstalled'); fs.mkdirSync(data, { recursive: true });
+  const execution = { id: 'task-1', status: 'completed', hasFinal: true, startedAt: 100, completedAt: 225,
+    steps: [{ id: 'one', text: '正在检查项目配置。' }, { id: 'two', text: '测试通过，开始生成安装包。' }] };
+  const reply = { role: 'assistant', text: '已完成修复。\n\n[查看文件](https://example.com)', execution, createdAt: 225 };
+  const conv = { id: 'sample', title: '过程与结果展示', messages: [{ role: 'user', text: '请修复这个问题。' }, reply] };
+  fs.writeFileSync(path.join(data, 'state.electron.json'), JSON.stringify({ conversations: [conv], activeConversationId: conv.id }));
+  const env = { ...process.env, APPDATA: temp, LOCALAPPDATA: path.join(temp, 'local') }; delete env.ELECTRON_RUN_AS_NODE;
+  let app;
+  try {
+    app = await electron.launch({ executablePath: process.argv[2] || require('electron'), args: process.argv[2] ? [] : ['.'], cwd: path.resolve(__dirname, '..'), env });
+    const page = await app.firstWindow();
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await page.waitForSelector('.execution-details');
+    await page.evaluate(() => document.querySelector('#codex-settings-dialog')?.close());
+    assert.equal(await page.locator('.execution-details').evaluate(el => el.open), false);
+    assert.ok((await page.locator('.msg-assistant .msg-expanded').innerText()).includes('已完成修复'));
+    assert.ok(!(await page.locator('.msg-assistant .msg-expanded').innerText()).includes('正在检查'));
+    await page.locator('[data-reply-copy="result"]').click();
+    assert.equal(await app.evaluate(({ clipboard }) => clipboard.readText()), reply.text);
+    await page.locator('.execution-details summary').click();
+    await page.locator('[data-reply-copy="all"]').click();
+    assert.equal(await app.evaluate(({ clipboard }) => clipboard.readText()), execution.steps.map(item => item.text).concat(reply.text).join('\n\n'));
+    const publish = async (message, running) => app.evaluate(({ BrowserWindow }, { message, running }) => {
+      const wc = BrowserWindow.getAllWindows()[0].webContents;
+      wc.send('app:event', { type: 'runner-state', conversationId: 'sample', running });
+      wc.send('app:event', { type: 'conversation-updated', conversation: { id: 'sample', title: '过程与结果展示', messages: [{ role: 'user', text: '请修复这个问题。' }, message] } });
+    }, { message, running });
+    const progress = { ...reply, text: '', execution: { ...execution, status: 'running', completedAt: 0, hasFinal: false } };
+    await publish(progress, true);
+    await page.waitForSelector('.execution-panel.is-running');
+    assert.equal(await page.locator('.execution-details').evaluate(el => el.open), true, 'Manual expansion survives update');
+    await page.locator('.execution-details summary').click();
+    await page.waitForSelector('.execution-preview', { state: 'visible' });
+    assert.ok((await page.locator('.execution-preview').innerText()).includes('测试通过'));
+    await publish({ ...progress, execution: { ...progress.execution, steps: [...execution.steps, { id: 'three', text: '安装包验证通过。' }] } }, true);
+    await page.waitForFunction(() => document.querySelector('.execution-preview').textContent.includes('安装包验证通过'));
+    assert.equal(await page.locator('.execution-details').evaluate(el => el.open), false);
+    await page.locator('.execution-details summary').click();
+    await publish(reply, false);
+    await page.waitForFunction(() => document.querySelector('.execution-status').textContent.includes('已完成'));
+    assert.equal(await page.locator('.execution-details').evaluate(el => el.open), true, 'Completion respects manual expansion');
+    await page.screenshot({ path: path.resolve(__dirname, '../../dist/windows/execution-expanded.png') });
+    await page.locator('.execution-details summary').click();
+    await page.screenshot({ path: path.resolve(__dirname, '../../dist/windows/execution-result.png') });
+    const interrupted = { role: 'assistant', text: '', execution: { ...execution, id: 'interrupted', hasFinal: false, status: 'interrupted', steps: [{ id: 'question', text: '请提供目标文件的位置。' }] } };
+    await publish(interrupted, false);
+    await page.waitForFunction(() => document.querySelector('.execution-status').textContent.includes('已中断'));
+    assert.equal(await page.locator('.execution-details').evaluate(el => el.open), true);
+    assert.ok((await page.locator('.execution-steps').innerText()).includes('请提供'));
+    await page.reload();
+    await page.waitForSelector('.execution-details');
+    assert.equal(await page.locator('.execution-details').evaluate(el => el.open), false);
+    assert.ok((await page.locator('.msg-assistant .msg-expanded').innerText()).includes('已完成修复'));
+    assert.deepEqual(errors, []);
+    console.log('PASS: progress/result separation, default folding, manual expansion persistence, final/full copy, interrupted question visibility, reloaded history.');
+  } finally {
+    if (app) await app.close();
+    fs.rmSync(temp, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+  }
+})().catch(error => { console.error(error); process.exitCode = 1; });

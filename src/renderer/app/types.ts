@@ -75,6 +75,14 @@ export interface UiState {
 }
 
 export interface ConversationMessage {
+  execution?: {
+    id: string;
+    status: 'running' | 'completed' | 'failed' | 'interrupted';
+    startedAt: number;
+    completedAt: number;
+    hasFinal?: boolean;
+    steps: Array<{ id: string; text: string }>;
+  };
   model?: string;
   reasoningEffort?: string;
   role: 'user' | 'assistant';

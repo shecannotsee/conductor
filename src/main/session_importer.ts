@@ -258,7 +258,8 @@ function importSessionJsonl(filePath) {
     }
 
     const contentText = extractMessageText(payload);
-    if (!contentText) {
+    const execution = role === 'assistant' ? require('./execution_codec').normalizeExecution(payload.execution) : undefined;
+    if (!contentText && !execution?.steps.length) {
       continue;
     }
     if (isEnvelopeUserMessage(role, contentText)) {
@@ -271,6 +272,7 @@ function importSessionJsonl(filePath) {
     messages.push({
       role,
       text: contentText,
+      ...(execution ? { execution } : {}),
       ...(role === 'assistant' ? { model: String(payload.model || latestModel || usage?.model || ''), reasoningEffort: String(payload.reasoningEffort || latestEffort || '') } : {}),
       ...(attachments.length ? { attachments } : {}),
       ...(usage ? { usage } : {}),
