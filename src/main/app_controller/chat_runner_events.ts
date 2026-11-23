@@ -30,7 +30,7 @@ function bindChatRunnerEvents(controller, {
     for (const group of groups) {
       const items = segments.filter(item => groupBySegment.get(item.id) === group);
       const execution = group.execution;
-      execution.steps = items.filter(item => item.phase === 'commentary' && item.text.trim()).map(item => ({ id: item.id, text: item.text }));
+      execution.steps = items.filter(item => item.phase === 'commentary' && item.text.trim()).map(item => ({ id: item.id, text: item.text, createdAt: item.createdAt }));
       execution.hasFinal = items.some(item => item.phase === 'final' && item.text.trim());
       const text = items.filter(item => item.phase !== 'commentary').map(item => item.text).filter(Boolean).join('\n\n');
       if (!text && !execution.steps.length) continue;

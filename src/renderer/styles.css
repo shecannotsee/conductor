@@ -6852,7 +6852,6 @@ html[data-theme='dark'] .window-titlebar-brand { color: #a7bbce; }
 .execution-message { margin-bottom: 12px; }
 .execution-status { font-size: 11px; color: #708296; }
 .is-running .execution-status { color: #2785df; }
-.execution-phase-label { margin-left: 8px; font-size: 11px; font-weight: 400; color: #708296; }
 .focus-row .composer-workdir:hover { background: #3390ec0c; border-color: #3390ec30; }
 .focus-row .composer-workdir-label { display: none; }
 .focus-row .composer-workdir-value { font-size: inherit; color: #708296; }

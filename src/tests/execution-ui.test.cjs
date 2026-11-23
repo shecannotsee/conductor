@@ -19,6 +19,9 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
     await page.evaluate(() => document.querySelector('#codex-settings-dialog')?.close());
     assert.equal(await page.locator('.execution-message').count(), 2);
     assert.equal(await page.locator('[data-reply-copy]').count(), 0);
+    assert.equal(await page.locator('.execution-phase-label').count(), 0);
+    assert.equal(await page.locator('.execution-step .msg-time').count(), 2);
+    assert.match(await page.locator('.execution-step .msg-time').first().innerText(), /\d{2}:\d{2}:\d{2}$/);
     assert.equal(await page.getByText('最终答复', { exact: true }).count(), 0);
     assert.equal(await page.locator('.execution-message details').count(), 0);
     assert.ok(await page.locator('.execution-step').first().isVisible());

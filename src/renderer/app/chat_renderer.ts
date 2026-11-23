@@ -117,6 +117,7 @@ function formatMessageTime(input: unknown): string {
   const dd = String(dt.getDate()).padStart(2, '0');
   const hh = String(dt.getHours()).padStart(2, '0');
   const mi = String(dt.getMinutes()).padStart(2, '0');
+  const ss = String(dt.getSeconds()).padStart(2, '0');
 
   const isSameYear = yyyy === now.getFullYear();
   const isSameDay = isSameYear
@@ -124,12 +125,12 @@ function formatMessageTime(input: unknown): string {
     && dt.getDate() === now.getDate();
 
   if (isSameDay) {
-    return `${hh}:${mi}`;
+    return `${hh}:${mi}:${ss}`;
   }
   if (isSameYear) {
-    return `${mm}-${dd} ${hh}:${mi}`;
+    return `${mm}-${dd} ${hh}:${mi}:${ss}`;
   }
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
 }
 
 function formatUsageCount(value: unknown): string {
@@ -462,7 +463,7 @@ function renderChatMessageBlock(
     ? renderMarkdownLike(item.text)
     : `<div class="msg-plain-text">${escapeHtml(String(item.text || ''))}</div>`;
   const renderToggle = `<button type="button" class="msg-toggle-render" data-msg-index="${escapeHtml(index)}" aria-pressed="${markdownEnabled ? 'true' : 'false'}" ${collapsed ? 'disabled' : ''}>${escapeHtml(renderToggleText)}</button>`;
-  const processHtml = renderExecution(item, conversation, role);
+  const processHtml = renderExecution(item, conversation, role, formatMessageTime);
   if (item.execution && !item.text.trim()) {
     return `<div class="msg-block msg-assistant-row" data-msg-row-index="${index}">${processHtml}</div>`;
   }
