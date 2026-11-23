@@ -12,24 +12,38 @@ function bindChatRunnerEvents(controller, {
   userText,
   enableStreamPreview = false,
 }) {
-  const execution = { id: require('node:crypto').randomUUID(), status: 'running', startedAt: nowTs(), completedAt: 0, hasFinal: false, steps: [] };
+  const makeGroup = (anchor = null) => ({
+    anchor, message: null,
+    execution: { id: require('node:crypto').randomUUID(), status: 'running', startedAt: nowTs(), completedAt: 0, hasFinal: false, steps: [] },
+  });
+  const groups = [makeGroup()];
+  const groupBySegment = new Map();
+  let currentGroup = groups[0];
   let segmentedMessage = null;
   let segmentTimer = null;
   let segments = [];
   const publishSegments = () => {
+    if (segmentTimer) clearTimeout(segmentTimer);
     segmentTimer = null;
     const conv = getConversation(controller.conversations, targetId);
     if (!conv) return;
-    execution.steps = segments.filter(item => item.phase === 'commentary' && item.text.trim()).map(item => ({ id: item.id, text: item.text }));
-    execution.hasFinal = segments.some(item => item.phase === 'final' && item.text.trim());
-    const text = segments.filter(item => item.phase !== 'commentary').map(item => item.text).filter(Boolean).join('\n\n');
-    if (!text && !execution.steps.length) return;
-    if (!segmentedMessage) {
-      segmentedMessage = { role: 'assistant', text: '', createdAt: nowTs(), execution };
-      conv.messages.push(segmentedMessage);
+    for (const group of groups) {
+      const items = segments.filter(item => groupBySegment.get(item.id) === group);
+      const execution = group.execution;
+      execution.steps = items.filter(item => item.phase === 'commentary' && item.text.trim()).map(item => ({ id: item.id, text: item.text }));
+      execution.hasFinal = items.some(item => item.phase === 'final' && item.text.trim());
+      const text = items.filter(item => item.phase !== 'commentary').map(item => item.text).filter(Boolean).join('\n\n');
+      if (!text && !execution.steps.length) continue;
+      if (!group.message) {
+        group.message = { role: 'assistant', text: '', createdAt: nowTs(), execution };
+        // Late completion of an earlier item must stay before the inserted user message.
+        const nextAnchor = groups.slice(groups.indexOf(group) + 1).map(next => conv.messages.indexOf(next.anchor)).find(index => index >= 0);
+        conv.messages.splice(nextAnchor ?? conv.messages.length, 0, group.message);
+      }
+      group.message.text = text;
     }
-    segmentedMessage.text = text;
-    controller.assistantBufferByRunner.set(runner, text);
+    segmentedMessage = [...groups].reverse().find(group => group.message?.text.trim())?.message || currentGroup.message;
+    controller.assistantBufferByRunner.set(runner, segmentedMessage?.text || '');
     conv.updatedAt = nowTs();
     controller._syncConversationUpdated(conv);
     controller._schedulePersist();
@@ -37,7 +51,29 @@ function bindChatRunnerEvents(controller, {
   runner.on('assistant_segments', items => {
     controller._markRequestWaitNoticeResponded(runner);
     segments = items;
+    for (const item of items) if (!groupBySegment.has(item.id)) groupBySegment.set(item.id, currentGroup);
     if (!segmentTimer) segmentTimer = setTimeout(publishSegments, 120);
+  });
+  runner.on('user_inserted', message => {
+    publishSegments();
+    currentGroup.execution.status = 'completed';
+    currentGroup.execution.completedAt = nowTs();
+    currentGroup = makeGroup(message);
+    groups.push(currentGroup);
+  });
+  runner.on('user_insert_failed', message => {
+    if (currentGroup.anchor !== message) return;
+    const rejectedGroup = groups.pop();
+    currentGroup = groups[groups.length - 1];
+    for (const [id, group] of groupBySegment) {
+      if (group === rejectedGroup) groupBySegment.set(id, currentGroup);
+    }
+    const conv = getConversation(controller.conversations, targetId);
+    const index = conv?.messages.indexOf(rejectedGroup.message) ?? -1;
+    if (index >= 0) conv.messages.splice(index, 1);
+    currentGroup.execution.status = 'running';
+    currentGroup.execution.completedAt = 0;
+    publishSegments();
   });
   runner.on('status', (phase) => {
     controller._setPhase(targetId, phase);
@@ -166,8 +202,10 @@ function bindChatRunnerEvents(controller, {
   runner.on('finished', (result) => {
     if (segmentTimer) { clearTimeout(segmentTimer); segmentTimer = null; }
     if (runner.supportsAssistantSegments) {
-      execution.status = runner.stopped ? 'interrupted' : result.exitCode === 0 ? 'completed' : 'failed';
-      execution.completedAt = nowTs();
+      for (const group of groups) {
+        group.execution.status = runner.stopped ? 'interrupted' : result.exitCode === 0 ? 'completed' : 'failed';
+        group.execution.completedAt = nowTs();
+      }
       publishSegments();
     }
     const targetConv = getConversation(controller.conversations, targetId);

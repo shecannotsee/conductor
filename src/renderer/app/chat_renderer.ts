@@ -30,6 +30,7 @@ import { renderExecution } from './execution_renderer.js';
 let lastRenderedConversationId = '';
 let lastRenderedMessageCount = -1;
 let lastRenderedMessageSignature = '';
+let lastRenderedHistorySignature = '';
 
 interface ModelPricing {
   inputPerMillion: number;
@@ -539,12 +540,14 @@ function renderChat(stickToBottom = true) {
   const latestAssistantIndex = findLatestAssistantMessageIndex(conv);
   const lastMessage = conv.messages[totalCount - 1];
   const lastMessageSignature = JSON.stringify(lastMessage);
+  const historySignature = JSON.stringify(conv.messages.slice(startIndex, -1));
 
   // Streaming updates usually change only the last assistant message. Keep the
   // existing DOM and replace that row instead of rebuilding all visible Markdown.
   if (
     lastRenderedConversationId === state.activeConversationId
     && lastRenderedMessageCount === totalCount
+    && lastRenderedHistorySignature === historySignature
     && lastRenderedMessageSignature !== lastMessageSignature
   ) {
     const history = el.chatView.querySelector('.chat-history-list');
@@ -578,6 +581,7 @@ function renderChat(stickToBottom = true) {
   lastRenderedConversationId = state.activeConversationId;
   lastRenderedMessageCount = totalCount;
   lastRenderedMessageSignature = lastMessageSignature;
+  lastRenderedHistorySignature = historySignature;
 }
 
 function isChatViewNearBottom(threshold = 72) {

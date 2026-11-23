@@ -23,7 +23,7 @@ function setup() {
     notifyConversationResult: async () => ({ skipped: true }),
   }, { get: (obj, key) => key in obj ? obj[key] : () => {} });
   bindChatRunnerEvents(controller, { targetId: 'test', runner, userText: 'test' });
-  return { runner, conversation, progressUpdates };
+  return { runner, conversation, progressUpdates, controller };
 }
 function message(runner, id, phase, text) {
   runner._handleNotification('item/started', { turnId: 'turn', item: { id, type: 'agentMessage', phase, text: '' } });
@@ -89,4 +89,48 @@ test('live commentary stays visible in chat and the original runtime workflow', 
   message(runner, 'result', 'final_answer', 'Done');
   runner.emit('finished', { exitCode: 0 });
   assert.equal(conversation.messages[0].text, 'Done');
+});
+
+const { chatMethods } = require('../app/main/app_controller/methods_chat');
+function insertionSetup() {
+  const result = setup();
+  result.controller.runners = new Map([['test', result.runner]]);
+  result.controller.stepIndexByRunner = new Map();
+  result.controller._resolveConversationProvider = () => 'codex';
+  result.controller.snapshot = () => ({});
+  return result;
+}
+test('inserted instructions retain order even with pending stream flush and early steer response', async () => {
+  const { runner, conversation, controller } = insertionSetup();
+  message(runner, 'before', 'commentary', 'Before insertion');
+  let count = 0;
+  runner.steer = async () => {
+    count += 1;
+    message(runner, `after-${count}`, 'commentary', `After insertion ${count}`);
+    await new Promise(resolve => setTimeout(resolve, 160));
+  };
+  assert.equal((await chatMethods.insertMessage.call(controller, { conversationId: 'test', text: 'Change direction' })).inserted, true);
+  assert.equal((await chatMethods.insertMessage.call(controller, { conversationId: 'test', text: 'Another change' })).inserted, true);
+  // A late update belongs to its original position, never to the latest instruction.
+  runner._handleNotification('item/completed', { turnId: 'turn', item: { id: 'before', type: 'agentMessage', phase: 'commentary', text: 'Before insertion updated' } });
+  message(runner, 'final', 'final_answer', 'Done after changes');
+  runner.emit('finished', { exitCode: 0 });
+  assert.deepEqual(conversation.messages.map(item => item.role), ['assistant', 'user', 'assistant', 'user', 'assistant']);
+  assert.equal(conversation.messages[0].execution.steps[0].text, 'Before insertion updated');
+  assert.equal(conversation.messages[2].execution.steps[0].text, 'After insertion 1');
+  assert.equal(conversation.messages[4].execution.steps[0].text, 'After insertion 2');
+  assert.equal(conversation.messages[4].text, 'Done after changes');
+});
+test('failed insertion removes unaccepted user text and allows later insertion', async () => {
+  const { runner, conversation, controller } = insertionSetup();
+  message(runner, 'before', 'commentary', 'Still working');
+  runner.steer = async () => { throw new Error('Rejected'); };
+  assert.match((await chatMethods.insertMessage.call(controller, { conversationId: 'test', text: 'Rejected input' })).error, /Rejected/);
+  assert.equal(conversation.messages.some(item => item.role === 'user'), false);
+  assert.equal(runner.insertingMessage, false);
+  runner.steer = async () => {};
+  assert.equal((await chatMethods.insertMessage.call(controller, { conversationId: 'test', text: 'Accepted' })).inserted, true);
+  message(runner, 'final', 'final_answer', 'Done');
+  runner.emit('finished', { exitCode: 0 });
+  assert.deepEqual(conversation.messages.map(item => item.role), ['assistant', 'user', 'assistant']);
 });

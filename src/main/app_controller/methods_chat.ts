@@ -211,15 +211,28 @@ const chatMethods = {
       });
     }
 
+    if (runner.insertingMessage) {
+      return { error: '上一条插入指令仍在提交，请稍后重试。', snapshot: this.snapshot() };
+    }
+    runner.insertingMessage = true;
+    const insertedMessage = { role: 'user', text: userText, createdAt: nowTs() };
+    // Establish ordering before steer can emit any response, including during its acknowledgement.
+    runner.emit('user_inserted', insertedMessage);
+    conv.messages.push(insertedMessage);
+    conv.updatedAt = nowTs();
+    this._syncConversationUpdated(conv);
     try {
       await runner.steer(userText);
     } catch (error) {
+      const index = conv.messages.indexOf(insertedMessage);
+      if (index >= 0) conv.messages.splice(index, 1);
+      runner.emit('user_insert_failed', insertedMessage);
+      this._syncConversationUpdated(conv);
+      this._persist();
       return { error: `插入对话失败: ${error?.message || String(error)}`, snapshot: this.snapshot() };
+    } finally {
+      runner.insertingMessage = false;
     }
-
-    conv.messages.push({ role: 'user', text: userText, createdAt: nowTs() });
-    conv.updatedAt = nowTs();
-    this._syncConversationUpdated(conv);
 
     const currentRound = Math.max(1, this.roundIndexByRunner.get(runner) || 1);
     const stepIndex = (this.stepIndexByRunner.get(runner) || 0) + 1;

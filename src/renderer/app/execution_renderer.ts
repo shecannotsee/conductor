@@ -13,7 +13,7 @@ function renderExecution(item: ConversationMessage, conversation: ConversationSu
   const status = running ? label('正在执行中', 'In progress')
     : execution.status === 'failed' ? label('失败', 'Failed')
       : interrupted ? label('已中断', 'Interrupted')
-        : !item.text.trim() ? label('未收到答复', 'No response') : '';
+        : !item.text.trim() && conversation.messages[conversation.messages.length - 1] === item ? label('未收到答复', 'No response') : '';
   return execution.steps.map((step, index) => {
     const last = index === execution.steps.length - 1;
     return `<div class="execution-message${running && last ? ' is-running' : ''}">
