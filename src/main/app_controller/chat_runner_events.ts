@@ -22,6 +22,7 @@ function bindChatRunnerEvents(controller, {
   let segmentedMessage = null;
   let segmentTimer = null;
   let segments = [];
+  let lastLiveProgress = '';
   const publishSegments = () => {
     if (segmentTimer) clearTimeout(segmentTimer);
     segmentTimer = null;
@@ -36,13 +37,22 @@ function bindChatRunnerEvents(controller, {
       const text = items.filter(item => item.phase !== 'commentary' && (item.completed || execution.status !== 'running')).map(item => item.text).filter(Boolean).join('\n\n');
       if (!text && !execution.steps.length && !execution.activeText) continue;
       if (!group.message) {
-        group.message = { role: 'assistant', text: '', createdAt: nowTs(), execution };
+        group.message = { role: 'assistant', text: '', model: String(runner.replyIdentity?.model || controller._ensureMeta(targetId)?.['模型'] || ''), reasoningEffort: String(runner.replyIdentity?.reasoningEffort || ''), createdAt: nowTs(), execution };
         // Late completion of an earlier item must stay before the inserted user message.
         const nextAnchor = groups.slice(groups.indexOf(group) + 1).map(next => conv.messages.indexOf(next.anchor)).find(index => index >= 0);
         conv.messages.splice(nextAnchor ?? conv.messages.length, 0, group.message);
       }
       group.message.text = text;
     }
+    const active = segments.filter(item => item.phase === 'commentary' && !item.completed && item.text.trim()).slice(-1)[0];
+    const liveKey = active ? `${active.id}:${active.text}` : '';
+    if (liveKey && liveKey !== lastLiveProgress && currentGroup.execution.status === 'running') {
+      const round = Math.max(1, controller.roundIndexByRunner.get(runner) || 1);
+      const segmentIndex = controller._resolveAssistantProgressSegmentIndex(targetId, round);
+      controller._appendStructuredAssistantProgress(targetId, active.text, { roundIndex: round, segmentIndex });
+      controller._appendWorkflowAssistantProgress(targetId, round, active.text, { segmentIndex });
+    }
+    lastLiveProgress = liveKey;
     segmentedMessage = [...groups].reverse().find(group => group.message?.text.trim())?.message || currentGroup.message;
     controller.assistantBufferByRunner.set(runner, segmentedMessage?.text || '');
     conv.updatedAt = nowTs();

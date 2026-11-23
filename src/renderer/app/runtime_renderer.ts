@@ -502,9 +502,6 @@ function renderWorkflowTab(runtime: RuntimeState, stickToBottom = true) {
     }
 
     if (item.type === 'assistant-progress') {
-      const conversation = state.conversations.find(conv => conv.id === state.activeConversationId);
-      const alreadyInChat = conversation?.messages.some(message => message.execution?.steps.some(step => step.completed !== false && step.text.trim() === String(item.fullText || item.body || '').trim()));
-      if (alreadyInChat) return '';
       const segmentIndex = Number(item.segmentIndex || 0) || 0;
       const title = segmentIndex > 0
         ? t('runtimeWorkflowProgressIndexed', { index: segmentIndex })

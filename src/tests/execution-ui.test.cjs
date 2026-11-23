@@ -6,7 +6,7 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
   const data = path.join(temp, 'ConductorInstalled'); fs.mkdirSync(data, { recursive: true });
   const execution = { id: 'task-1', status: 'completed', hasFinal: true, startedAt: 100, completedAt: 225,
     steps: [{ id: 'one', text: '正在检查项目配置。' }, { id: 'two', text: '测试通过，开始生成安装包。' }] };
-  const reply = { role: 'assistant', text: '已完成修复。\n\n[查看文件](https://example.com)', execution, createdAt: 225 };
+  const reply = { model: 'test-model', reasoningEffort: 'high', role: 'assistant', text: '已完成修复。\n\n[查看文件](https://example.com)', execution, createdAt: 225 };
   const conv = { id: 'sample', title: '过程与结果展示', messages: [{ role: 'user', text: '请修复这个问题。' }, reply] };
   fs.writeFileSync(path.join(data, 'state.electron.json'), JSON.stringify({ conversations: [conv], activeConversationId: conv.id }));
   const env = { ...process.env, APPDATA: temp, LOCALAPPDATA: path.join(temp, 'local') }; delete env.ELECTRON_RUN_AS_NODE;
@@ -18,6 +18,7 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
     await page.waitForSelector('.execution-message');
     await page.evaluate(() => document.querySelector('#codex-settings-dialog')?.close());
     assert.equal(await page.locator('.execution-message').count(), 2);
+    assert.ok((await page.locator('.execution-message .msg-role').first().innerText()).includes('test-model · high'));
     assert.equal(await page.locator('[data-reply-copy]').count(), 0);
     assert.equal(await page.locator('.execution-phase-label').count(), 0);
     assert.equal(await page.locator('.execution-step .msg-time').count(), 2);
@@ -43,6 +44,7 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
     await publish({ ...progress, execution: { ...progress.execution, activeText: pendingStep.text, steps: [...execution.steps, pendingStep] } }, true);
     await page.waitForFunction(() => document.querySelector('.chat-transient-stack').textContent.includes('正在核对新的阶段内容'));
     assert.equal(await page.locator('.execution-message').count(), 2);
+    await page.waitForFunction(text => document.querySelector('.conversation-preview')?.textContent.includes(text), pendingStep.text);
     assert.ok(!(await page.locator('.chat-history-list').innerText()).includes(pendingStep.text));
     await publish({ ...progress, execution: { ...progress.execution, activeText: '', steps: [...execution.steps, { ...pendingStep, completed: true }] } }, true);
     await page.waitForFunction(() => document.querySelectorAll('.execution-message').length === 3);

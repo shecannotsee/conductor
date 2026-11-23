@@ -220,6 +220,7 @@ function applyEvent(event: AppEvent | null | undefined) {
       if (conv.id === state.activeConversationId && state.workspaceMode !== 'team') {
         renderJobs.header = true;
         renderJobs.chat = true;
+        renderJobs.runtimeWorkflow = true;
         renderJobs.runButtons = true;
       }
       if (isTeamRoleConversation) {

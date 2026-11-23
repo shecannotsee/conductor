@@ -147,7 +147,9 @@ function conversationPreviewText(item: ConversationSummary): string {
       ? `${teamMeta.upstreamName || t('agentTeamUpstream')}: `
       : `${teamMeta.roleName}: `
     : latest.role === 'user' ? `${t('roleYou')}: ` : '';
-  return messagePreview(`${prefix}${String(latest.text || '')}`);
+  const steps = latest.execution?.steps || [];
+  const text = latest.execution?.activeText || latest.text || steps[steps.length - 1]?.text || '';
+  return messagePreview(`${prefix}${String(text)}`);
 }
 
 function agentTeamConversationMeta(conversationId: string): AgentTeamConversationMeta | null {
@@ -204,6 +206,8 @@ function sortedConversationsCached(): ConversationSummary[] {
     .map((item) => `${item.id}:${Number(item.pinnedAt || 0)}:${Number(item.updatedAt || 0)}:${Number(item.createdAt || 0)}`)
     .join('|');
   if (cacheKey === sortedConversationCacheKey) {
+    const current = new Map(state.conversations.map(item => [item.id, item]));
+    sortedConversationCache = sortedConversationCache.map(item => current.get(item.id) || item);
     return sortedConversationCache;
   }
   sortedConversationCacheKey = cacheKey;

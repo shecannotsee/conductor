@@ -468,7 +468,7 @@ class StateStore {
       if (!fs.existsSync(target)) this._writeJsonFile(target, messages);
       conv.messagesFile = file;
       const last = messages[messages.length - 1];
-      conv.messagePreview = last ? [{ role: last.role, text: String(last.text || '').slice(0, 300), createdAt: last.createdAt }] : [];
+      conv.messagePreview = last ? [{ role: last.role, text: String(last.execution?.activeText || last.text || last.execution?.steps?.[last.execution.steps.length - 1]?.text || '').slice(0, 300), createdAt: last.createdAt }] : [];
       delete conv.messages;
     }
     const previousIndex = this._readStateFile(this.path);

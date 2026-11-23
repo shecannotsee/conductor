@@ -156,3 +156,15 @@ test('active stage transfers to a completed message and final stays pending unti
   assert.equal(conversation.messages[0].text, 'Done');
   assert.equal(conversation.messages[0].execution.activeText, '');
 });
+
+test('intermediate messages retain model identity and lightweight previews include progress', async () => {
+  const { runner, conversation } = setup();
+  runner.replyIdentity = { model: 'test-model', reasoningEffort: 'high' };
+  message(runner, 'stage', 'commentary', 'Latest stage text');
+  await new Promise(resolve => setTimeout(resolve, 160));
+  assert.equal(conversation.messages[0].model, 'test-model');
+  assert.equal(conversation.messages[0].reasoningEffort, 'high');
+  const { conversationCopy } = require('../app/main/conversation_history');
+  assert.equal(conversationCopy(conversation).messages[0].text, 'Latest stage text');
+  runner.emit('finished', { exitCode: 0 });
+});

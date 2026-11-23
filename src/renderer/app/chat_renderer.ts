@@ -328,7 +328,7 @@ function messageRoleLabel(item: ConversationMessage, conversation: ConversationS
   if (item.role === 'user') {
     return t('roleYou');
   }
-  const model = String(item.model || item.usage?.model || '').trim();
+  const model = String(item.model || item.usage?.model || ensureMeta(conversation.id)['模型'] || '').trim();
   const effort = String(item.reasoningEffort || '').trim();
   return [model || 'AI', effort].filter(Boolean).join(' · ');
 }

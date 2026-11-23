@@ -38,7 +38,7 @@ function conversationCopy(conv, full = false, persistence = false) {
   } else {
     const messages = record && !record.loaded ? record.preview : conv.messages;
     const last = messages?.[messages.length - 1];
-    copy.messages = last ? [{ role: last.role, text: String(last.text || '').slice(0, 300), createdAt: last.createdAt }] : [];
+    copy.messages = last ? [{ role: last.role, text: String(last.execution?.activeText || last.text || last.execution?.steps?.[last.execution.steps.length - 1]?.text || '').slice(0, 300), createdAt: last.createdAt }] : [];
   }
   return copy;
 }
