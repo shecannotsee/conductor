@@ -134,3 +134,25 @@ test('failed insertion removes unaccepted user text and allows later insertion',
   runner.emit('finished', { exitCode: 0 });
   assert.deepEqual(conversation.messages.map(item => item.role), ['assistant', 'user', 'assistant']);
 });
+
+test('active stage transfers to a completed message and final stays pending until complete', async () => {
+  const { runner, conversation } = setup();
+  runner._handleNotification('item/started', { turnId: 'turn', item: { id: 'stage', type: 'agentMessage', phase: 'commentary', text: '' } });
+  runner._handleNotification('item/agentMessage/delta', { turnId: 'turn', itemId: 'stage', delta: 'Working on stage' });
+  await new Promise(resolve => setTimeout(resolve, 160));
+  assert.equal(conversation.messages[0].execution.activeText, 'Working on stage');
+  assert.equal(conversation.messages[0].execution.steps[0].completed, false);
+  runner._handleNotification('item/completed', { turnId: 'turn', item: { id: 'stage', type: 'agentMessage', phase: 'commentary', text: 'Working on stage' } });
+  await new Promise(resolve => setTimeout(resolve, 160));
+  assert.equal(conversation.messages[0].execution.activeText, '');
+  assert.equal(conversation.messages[0].execution.steps[0].completed, true);
+  runner._handleNotification('item/started', { turnId: 'turn', item: { id: 'reply', type: 'agentMessage', phase: 'final_answer', text: '' } });
+  runner._handleNotification('item/agentMessage/delta', { turnId: 'turn', itemId: 'reply', delta: 'Done' });
+  await new Promise(resolve => setTimeout(resolve, 160));
+  assert.equal(conversation.messages[0].text, '');
+  assert.equal(conversation.messages[0].execution.activeText, 'Done');
+  runner._handleNotification('item/completed', { turnId: 'turn', item: { id: 'reply', type: 'agentMessage', phase: 'final_answer', text: 'Done' } });
+  runner.emit('finished', { exitCode: 0 });
+  assert.equal(conversation.messages[0].text, 'Done');
+  assert.equal(conversation.messages[0].execution.activeText, '');
+});

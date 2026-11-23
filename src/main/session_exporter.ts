@@ -92,7 +92,7 @@ function exportConversationJsonl(filePath, conversation, meta: any = {}, options
   }
 
   const messages = Array.isArray(conversation.messages)
-    ? conversation.messages.filter((item) => item && (String(item.text || '').trim() || item.execution?.steps?.length))
+    ? conversation.messages.filter((item) => item && (String(item.text || '').trim() || item.execution?.steps?.length || item.execution?.activeText))
     : [];
   if (!messages.length) {
     throw new Error('当前会话没有可导出的消息');

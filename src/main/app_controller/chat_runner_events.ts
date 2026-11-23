@@ -14,7 +14,7 @@ function bindChatRunnerEvents(controller, {
 }) {
   const makeGroup = (anchor = null) => ({
     anchor, message: null,
-    execution: { id: require('node:crypto').randomUUID(), status: 'running', startedAt: nowTs(), completedAt: 0, hasFinal: false, steps: [] },
+    execution: { id: require('node:crypto').randomUUID(), status: 'running', startedAt: nowTs(), completedAt: 0, hasFinal: false, activeText: '', steps: [] },
   });
   const groups = [makeGroup()];
   const groupBySegment = new Map();
@@ -30,10 +30,11 @@ function bindChatRunnerEvents(controller, {
     for (const group of groups) {
       const items = segments.filter(item => groupBySegment.get(item.id) === group);
       const execution = group.execution;
-      execution.steps = items.filter(item => item.phase === 'commentary' && item.text.trim()).map(item => ({ id: item.id, text: item.text, createdAt: item.createdAt }));
+      execution.steps = items.filter(item => item.phase === 'commentary' && item.text.trim()).map(item => ({ id: item.id, text: item.text, createdAt: item.createdAt, completed: item.completed }));
       execution.hasFinal = items.some(item => item.phase === 'final' && item.text.trim());
-      const text = items.filter(item => item.phase !== 'commentary').map(item => item.text).filter(Boolean).join('\n\n');
-      if (!text && !execution.steps.length) continue;
+      execution.activeText = execution.status === 'running' ? items.filter(item => !item.completed).map(item => item.text).filter(Boolean).join('\n\n') : '';
+      const text = items.filter(item => item.phase !== 'commentary' && (item.completed || execution.status !== 'running')).map(item => item.text).filter(Boolean).join('\n\n');
+      if (!text && !execution.steps.length && !execution.activeText) continue;
       if (!group.message) {
         group.message = { role: 'assistant', text: '', createdAt: nowTs(), execution };
         // Late completion of an earlier item must stay before the inserted user message.
@@ -138,6 +139,7 @@ function bindChatRunnerEvents(controller, {
       const segmentIndex = controller._resolveAssistantProgressSegmentIndex(targetId, currentRound);
       controller._appendStructuredAssistantProgress(targetId, text, { roundIndex: currentRound, segmentIndex });
       controller._appendWorkflowAssistantProgress(targetId, currentRound, text, { segmentIndex });
+      controller._sealAssistantProgressSegments(targetId, currentRound);
       return;
     }
     const bufferedText = normalizeAssistantRuntimeText(controller.assistantBufferByRunner.get(runner) || '');

@@ -9,7 +9,7 @@ class AssistantSegments {
     const phase = rawPhase === 'commentary' ? 'commentary'
       : ['final', 'final_answer'].includes(rawPhase) ? 'final' : rawPhase;
     const text = typeof value.text === 'string' ? value.text : previous.text + String(value.delta || '');
-    this.items.set(key, { id: key, text, phase, createdAt: previous.createdAt });
+    this.items.set(key, { id: key, text, phase, createdAt: previous.createdAt, completed: previous.completed || value.completed === true });
     return Array.from(this.items.values()).map(item => ({ ...item }));
   }
 }

@@ -259,7 +259,7 @@ function importSessionJsonl(filePath) {
 
     const contentText = extractMessageText(payload);
     const execution = role === 'assistant' ? require('./execution_codec').normalizeExecution(payload.execution) : undefined;
-    if (!contentText && !execution?.steps.length) {
+    if (!contentText && !execution?.steps.length && !execution?.activeText) {
       continue;
     }
     if (isEnvelopeUserMessage(role, contentText)) {

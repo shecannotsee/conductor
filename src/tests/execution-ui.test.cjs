@@ -39,6 +39,14 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
     await page.waitForFunction(() => document.querySelectorAll('.execution-message').length === 3);
     assert.ok((await page.locator('.execution-step').nth(2).innerText()).includes('安装包验证通过'));
     assert.ok(await page.locator('.chat-transient-stack .msg-running-step-panel').isVisible());
+    const pendingStep = { id: 'pending', text: '正在核对新的阶段内容', completed: false };
+    await publish({ ...progress, execution: { ...progress.execution, activeText: pendingStep.text, steps: [...execution.steps, pendingStep] } }, true);
+    await page.waitForFunction(() => document.querySelector('.chat-transient-stack').textContent.includes('正在核对新的阶段内容'));
+    assert.equal(await page.locator('.execution-message').count(), 2);
+    assert.ok(!(await page.locator('.chat-history-list').innerText()).includes(pendingStep.text));
+    await publish({ ...progress, execution: { ...progress.execution, activeText: '', steps: [...execution.steps, { ...pendingStep, completed: true }] } }, true);
+    await page.waitForFunction(() => document.querySelectorAll('.execution-message').length === 3);
+    assert.ok(!(await page.locator('.chat-transient-stack').innerText()).includes(pendingStep.text));
     await publish(reply, false);
     await page.waitForFunction(() => document.querySelectorAll('.execution-message').length === 2);
     await page.screenshot({ path: path.resolve(__dirname, '../../dist/windows/execution-result.png') });

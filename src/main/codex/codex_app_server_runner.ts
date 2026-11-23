@@ -419,7 +419,7 @@ class CodexAppServerRunner extends EventEmitter {
           const text = extractItemMessageText(item);
           this.emit('assistant_segments', this.assistantSegments.update(
             `${params?.turnId || this.activeTurnId}:${item.id || 'unidentified'}`,
-            { phase: item.phase, channel: item.channel, ...(method === 'item/completed' || text ? { text } : {}) },
+            { phase: item.phase, channel: item.channel, completed: method === 'item/completed', ...(method === 'item/completed' || text ? { text } : {}) },
           ));
         }
         const eventType = method === 'item/started' ? 'item.started' : 'item.completed';

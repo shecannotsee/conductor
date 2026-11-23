@@ -81,7 +81,8 @@ export interface ConversationMessage {
     startedAt: number;
     completedAt: number;
     hasFinal?: boolean;
-    steps: Array<{ id: string; text: string; createdAt?: number }>;
+    activeText?: string;
+    steps: Array<{ id: string; text: string; createdAt?: number; completed?: boolean }>;
   };
   model?: string;
   reasoningEffort?: string;
