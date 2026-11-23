@@ -13,15 +13,17 @@ function setup() {
   const runner = new CodexAppServerRunner({ commandText: 'codex', prompt: 'test', workdir: process.cwd() });
   const conversation = { id: 'test', title: 'Test', messages: [], createdAt: 1, updatedAt: 1 };
   const runtime = {};
+  const progressUpdates = [];
   const controller = new Proxy({
     conversations: [conversation], runtimeStore: { ensure: () => runtime },
     assistantBufferByRunner: new Map(), roundIndexByRunner: new Map(), userMessageByRunner: new Map(),
     _ensureMeta: () => ({}), _pendingQueueSize: () => 0,
+    _appendWorkflowAssistantProgress: (...args) => progressUpdates.push(args),
     _removeLastStructuredEventIf: () => false, _removeLastWorkflowItemIf: () => false,
     notifyConversationResult: async () => ({ skipped: true }),
   }, { get: (obj, key) => key in obj ? obj[key] : () => {} });
   bindChatRunnerEvents(controller, { targetId: 'test', runner, userText: 'test' });
-  return { runner, conversation };
+  return { runner, conversation, progressUpdates };
 }
 function message(runner, id, phase, text) {
   runner._handleNotification('item/started', { turnId: 'turn', item: { id, type: 'agentMessage', phase, text: '' } });
@@ -75,4 +77,16 @@ test('phase arriving only on completion reclassifies the same item without dupli
   assert.equal(conversation.messages[0].text, '');
   assert.equal(conversation.messages[0].execution.steps.length, 1);
   assert.equal(conversation.messages[0].execution.status, 'failed');
+});
+
+test('live commentary stays visible in chat and the original runtime workflow', async () => {
+  const { runner, conversation, progressUpdates } = setup();
+  message(runner, 'progress', 'commentary', 'Checking project files');
+  await new Promise(resolve => setTimeout(resolve, 180));
+  assert.equal(conversation.messages[0].execution.steps[0].text, 'Checking project files');
+  assert.equal(conversation.messages[0].execution.status, 'running');
+  assert.equal(progressUpdates[0][2], 'Checking project files');
+  message(runner, 'result', 'final_answer', 'Done');
+  runner.emit('finished', { exitCode: 0 });
+  assert.equal(conversation.messages[0].text, 'Done');
 });

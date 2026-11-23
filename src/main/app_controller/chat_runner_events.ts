@@ -91,10 +91,17 @@ function bindChatRunnerEvents(controller, {
   });
 
   runner.on('assistant_update', (payload) => {
-    if (runner.supportsAssistantSegments) return;
     controller._markRequestWaitNoticeResponded(runner);
     const text = normalizeAssistantRuntimeText(payload?.text || '');
     if (!text) {
+      return;
+    }
+    // Segmented chat rendering must not disable the original runtime progress.
+    if (runner.supportsAssistantSegments) {
+      const currentRound = Math.max(1, controller.roundIndexByRunner.get(runner) || 1);
+      const segmentIndex = controller._resolveAssistantProgressSegmentIndex(targetId, currentRound);
+      controller._appendStructuredAssistantProgress(targetId, text, { roundIndex: currentRound, segmentIndex });
+      controller._appendWorkflowAssistantProgress(targetId, currentRound, text, { segmentIndex });
       return;
     }
     const bufferedText = normalizeAssistantRuntimeText(controller.assistantBufferByRunner.get(runner) || '');
