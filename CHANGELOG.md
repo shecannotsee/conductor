@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.12] - 2026-11-25
+
+### Fixed
+
+- 阶段消息补齐 Markdown／原文切换和独立折叠控件，保持原有 Markdown 渲染规则。
+- 修复阶段消息容器重复收窄导致短句提前换行，气泡宽度与普通回复一致。
+
 ## [0.5.11] - 2026-11-25
 
 ### Changed

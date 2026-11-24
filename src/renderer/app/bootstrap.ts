@@ -1,3 +1,4 @@
+import { toggleExecutionMessage } from './execution_renderer.js';
 
 import { codexdesk } from './codexdesk.js';
 import type { AppSnapshot, ConversationSwitchPayload } from './types.js';
@@ -142,6 +143,13 @@ async function init() {
         return;
       }
 
+      const stageButton = target.closest<HTMLElement>('[data-execution-action]');
+      if (stageButton) {
+        event.preventDefault();
+        toggleExecutionMessage(stageButton.dataset.executionKey, stageButton.dataset.executionAction);
+        renderChat(false);
+        return;
+      }
       const toggleBtn = target.closest('.msg-toggle-collapse');
       if (toggleBtn) {
         event.preventDefault();

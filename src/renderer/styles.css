@@ -6849,7 +6849,7 @@ html[data-theme='dark'] .window-titlebar-brand { color: #a7bbce; }
 .focus-row .chat-title { margin-right: 0; }
 .focus-row .composer-workdir { margin: 0 auto 0 0; flex: 0 1 auto; max-width: 200px; font-size: 11px; gap: 6px; padding: 4px 8px; border: 1px solid #72889d24; border-radius: 6px; background: #72889d08; }
 .workdir-icon { width: 13px; height: 13px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; opacity: .75; }
-.execution-message { margin-bottom: 12px; }
+.execution-message { width: 100%; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: calc(4px * var(--chat-font-scale)); margin-bottom: 12px; }
 .execution-status { font-size: 11px; color: #708296; }
 .is-running .execution-status { color: #2785df; }
 .focus-row .composer-workdir:hover { background: #3390ec0c; border-color: #3390ec30; }

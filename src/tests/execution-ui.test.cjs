@@ -5,7 +5,7 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'conductor-execution-ui-'));
   const data = path.join(temp, 'ConductorInstalled'); fs.mkdirSync(data, { recursive: true });
   const execution = { id: 'task-1', status: 'completed', hasFinal: true, startedAt: 100, completedAt: 225,
-    steps: [{ id: 'one', text: '正在检查项目配置。' }, { id: 'two', text: '测试通过，开始生成安装包。' }] };
+    steps: [{ id: 'one', text: '我确认一下最新提交和远端同步状态。' }, { id: 'two', text: '测试通过，开始生成安装包。' }] };
   const reply = { model: 'test-model', reasoningEffort: 'high', role: 'assistant', text: '已完成修复。\n\n[查看文件](https://example.com)', execution, createdAt: 225 };
   const conv = { id: 'sample', title: '过程与结果展示', messages: [{ role: 'user', text: '请修复这个问题。' }, reply] };
   fs.writeFileSync(path.join(data, 'state.electron.json'), JSON.stringify({ conversations: [conv], activeConversationId: conv.id }));
@@ -26,7 +26,20 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
     assert.equal(await page.getByText('最终答复', { exact: true }).count(), 0);
     assert.equal(await page.locator('.execution-message details').count(), 0);
     assert.ok(await page.locator('.execution-step').first().isVisible());
-    assert.ok((await page.locator('.msg-assistant .msg-expanded').innerText()).includes('已完成修复'));
+    assert.ok((await page.locator('.msg-assistant .msg-expanded').last().innerText()).includes('已完成修复'));
+    const firstStage = page.locator('.execution-message').first();
+    assert.equal(await firstStage.locator('.msg-toggle-render').innerText(), 'Markdown');
+    const line = firstStage.locator('.msg-expanded p').first();
+    const lineCount = await line.evaluate(el => { const range = document.createRange(); range.selectNodeContents(el); return range.getClientRects().length; });
+    assert.equal(lineCount, 1, 'Short phase sentence should fit on one line');
+    await firstStage.locator('.msg-toggle-render').click();
+    assert.ok(await firstStage.locator('.msg-plain-text').isVisible());
+    await firstStage.locator('.msg-toggle-render').click();
+    await firstStage.locator('.msg-toggle-collapse').click();
+    assert.ok(!(await firstStage.locator('.msg-expanded').isVisible()));
+    assert.ok(await page.locator('.execution-message').nth(1).locator('.msg-expanded').isVisible());
+    await firstStage.locator('.msg-toggle-collapse').click();
+    assert.ok(await firstStage.locator('.msg-expanded').isVisible());
     const publish = async (message, running) => app.evaluate(({ BrowserWindow }, { message, running }) => {
       const wc = BrowserWindow.getAllWindows()[0].webContents;
       wc.send('app:event', { type: 'runner-state', conversationId: 'sample', running });
@@ -59,7 +72,7 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
     await page.reload();
     await page.waitForSelector('.execution-message');
     assert.equal(await page.locator('.execution-message').count(), 2);
-    assert.ok((await page.locator('.msg-assistant .msg-expanded').innerText()).includes('已完成修复'));
+    assert.ok((await page.locator('.msg-assistant .msg-expanded').last().innerText()).includes('已完成修复'));
     assert.deepEqual(errors, []);
     console.log('PASS: individual phase bubbles, live updates, no copy buttons or final label, original running steps, interrupted question visibility, reloaded history.');
   } finally {
