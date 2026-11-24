@@ -1,4 +1,4 @@
-const { app, Menu, shell } = require('electron');
+const { app, Menu, shell, dialog, clipboard, BrowserWindow } = require('electron');
 
 const ZOOM_FACTOR_MIN = 0.5;
 const ZOOM_FACTOR_MAX = 2.5;
@@ -173,11 +173,25 @@ function isExternalHttpUrl(input) {
   }
 }
 
+let externalPromptPending = false;
 function openExternalUrl(input) {
   if (!isExternalHttpUrl(input)) {
     return false;
   }
-  shell.openExternal(String(input)).catch(() => {});
+  if (externalPromptPending) return true;
+  externalPromptPending = true;
+  const url = String(input);
+  const parent = BrowserWindow.getFocusedWindow();
+  const options = {
+    type: 'question', title: '打开网页链接',
+    message: '是否使用默认网页浏览器打开此链接？', detail: url,
+    buttons: ['是', '否', '复制网页链接'], defaultId: 1, cancelId: 1, noLink: true,
+  };
+  const prompt = parent ? dialog.showMessageBox(parent, options) : dialog.showMessageBox(options);
+  prompt.then(async ({ response }) => {
+    if (response === 0) await shell.openExternal(url);
+    else if (response === 2) clipboard.writeText(url);
+  }).catch(() => {}).finally(() => { externalPromptPending = false; });
   return true;
 }
 

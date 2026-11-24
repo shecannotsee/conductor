@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.11] - 2026-11-25
+
+### Changed
+
+- 回复中的本地文件链接使用系统文件管理器定位文件，目录链接打开目录。
+- 网页链接打开前提示“是／否／复制网页链接”，确认后使用默认浏览器。
+
 ## [0.5.10] - 2026-11-24
 
 ### Fixed

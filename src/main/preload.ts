@@ -74,7 +74,7 @@ contextBridge.exposeInMainWorld('codexdesk', {
       return '';
     }
   },
-  openPath: (targetPath) => ipcRenderer.invoke('shell:open-path', { path: targetPath }),
+  openPath: (targetPath, reveal = false) => ipcRenderer.invoke('shell:open-path', { path: targetPath, reveal }),
   setMenuLanguage: (language) => ipcRenderer.invoke('ui:set-menu-language', { language }),
   setWindowTheme: (theme) => ipcRenderer.invoke('ui:set-window-theme', { theme }),
   getZoomFactor: () => ipcRenderer.invoke('ui:get-zoom-factor'),

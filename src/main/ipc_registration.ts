@@ -398,8 +398,9 @@ function registerAppIpc({
     return getController().cancelAllQueuedMessages(String(payload?.conversationId || ''));
   });
 
-  ipcMain.handle('shell:open-path', async (_, payload) => {
-    return openLocalPath(payload?.path);
+  ipcMain.handle('shell:open-path', async (event, payload) => {
+    if (event.sender !== getMainWindow()?.webContents || event.senderFrame !== event.sender.mainFrame) return { error: '无效的请求来源。' };
+    return openLocalPath(payload?.path, payload?.reveal === true);
   });
 
   ipcMain.handle('app:resolve-close-guard', async (_, payload) => {

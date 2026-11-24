@@ -452,7 +452,7 @@ export interface CodexDeskApi {
   cancelQueuedMessage(conversationId: string, queuedMessageId: string, queuedIndex?: number): Promise<GenericResult>;
   cancelAllQueuedMessages(conversationId: string): Promise<GenericResult>;
   getPathForFile(file: File): string;
-  openPath(targetPath: string): Promise<GenericResult>;
+  openPath(targetPath: string, reveal?: boolean): Promise<GenericResult>;
   setMenuLanguage(language: Language): Promise<unknown>;
   setWindowTheme(theme: Theme): Promise<unknown>;
   getZoomFactor(): Promise<GenericResult>;

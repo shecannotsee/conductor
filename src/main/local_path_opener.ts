@@ -90,7 +90,7 @@ function parseLocalOpenTarget(input) {
   return { path: targetPath, line, column };
 }
 
-async function openLocalPath(input) {
+async function openLocalPath(input, reveal = false) {
   const parsed = parseLocalOpenTarget(input);
   const targetPath = String(parsed.path || '').trim();
   if (!targetPath || !path.isAbsolute(targetPath)) {
@@ -105,6 +105,11 @@ async function openLocalPath(input) {
     if (String(result || '').trim()) {
       return { ok: false, error: String(result || '').trim() };
     }
+    return { ok: true };
+  }
+
+  if (reveal) {
+    shell.showItemInFolder(targetPath);
     return { ok: true };
   }
 

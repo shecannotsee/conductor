@@ -272,7 +272,7 @@ async function init() {
       const encodedPath = String(localPathTrigger.getAttribute('data-open-path') || '').trim();
       const targetPath = encodedPath ? decodeURIComponent(encodedPath) : '';
       if (!targetPath) return;
-      codexdesk.openPath(targetPath).then((result) => {
+      codexdesk.openPath(targetPath, localPathTrigger.classList.contains('md-local-link')).then((result) => {
         if (result?.error) { showAppNotice(localizeKnownText(result.error), 'error'); return; }
         if (result?.warning) showAppNotice(localizeKnownText(String(result.warning || '')), 'info');
       }).catch(() => {});

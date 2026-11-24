@@ -44,7 +44,8 @@ function isMarkdownEmail(value) {
 }
 
 function renderMarkdownLink(label, target) {
-  const href = String(target || '').trim();
+  const rawTarget = String(target || '').trim();
+  const href = rawTarget.startsWith('<') && rawTarget.endsWith('>') ? rawTarget.slice(1, -1) : rawTarget;
   const localPath = normalizeLocalLinkTarget(href);
   if (localPath) {
     return `<a href="#" class="md-local-link" data-open-path="${escapeHtml(encodeURIComponent(localPath))}" title="${escapeHtml(localPath)}">${label}</a>`;
