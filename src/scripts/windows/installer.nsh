@@ -67,13 +67,17 @@ Var DeleteWorkspace
 !macroend
 !ifndef BUILD_UNINSTALLER
 Function ConductorOptions
-  !insertmacro MUI_HEADER_TEXT "安装选项" "选择快捷方式。默认工作目录为安装目录下的 workspace。"
+  !insertmacro MUI_HEADER_TEXT "安装内容与选项" "确认安装位置、安装内容和快捷方式设置。"
   nsDialogs::Create 1018
   Pop $0
-  ${NSD_CreateCheckbox} 0 12u 100% 16u "创建桌面快捷方式"
+  ${NSD_CreateLabel} 0 4u 100% 54u "将安装 Conductor 桌面应用及随附的 Codex 运行环境。\r\n首次运行时使用的默认 workspace 位于安装目录下。\r\n聊天记录、API 配置和缓存保存在用户数据目录；更新安装会保留这些数据。"
+  Pop $1
+  ${NSD_CreateLabel} 0 64u 100% 18u "安装目录：$INSTDIR"
+  Pop $1
+  ${NSD_CreateCheckbox} 0 92u 100% 16u "创建桌面快捷方式"
   Pop $DesktopControl
   ${NSD_SetState} $DesktopControl $DesktopChoice
-  ${NSD_CreateCheckbox} 0 40u 100% 16u "添加到开始菜单"
+  ${NSD_CreateCheckbox} 0 120u 100% 16u "添加到开始菜单"
   Pop $MenuControl
   ${NSD_SetState} $MenuControl $MenuChoice
   nsDialogs::Show
@@ -87,20 +91,26 @@ FunctionEnd
   Page custom ConductorOptions ConductorOptionsLeave
 !macroend
 !macro customInstall
+  DetailPrint "正在创建默认工作目录：$INSTDIR\workspace"
   CreateDirectory "$INSTDIR\workspace"
   ; A versioned icon path invalidates Explorer's old executable icon cache.
+  DetailPrint "正在安装 Conductor 快捷方式图标"
   SetOutPath "$INSTDIR"
   File /oname=conductor-${VERSION}.ico "${BUILD_RESOURCES_DIR}\icon.ico"
   ${If} $DesktopChoice == 0
+    DetailPrint "跳过创建桌面快捷方式"
     Delete "$newDesktopLink"
   ${ElseIfNot} ${isNoDesktopShortcut}
+    DetailPrint "正在创建桌面快捷方式"
     CreateShortCut "$newDesktopLink" "$appExe" "" "$INSTDIR\conductor-${VERSION}.ico" 0 "" "" "${APP_DESCRIPTION}"
     WinShell::SetLnkAUMI "$newDesktopLink" "${APP_ID}"
     System::Call 'Shell32::SHChangeNotify(i 0x2000, i 0x1005, w "$newDesktopLink", p 0)'
   ${EndIf}
   ${If} $MenuChoice == 0
+    DetailPrint "跳过添加开始菜单快捷方式"
     Delete "$newStartMenuLink"
   ${Else}
+    DetailPrint "正在创建开始菜单快捷方式"
     !insertmacro createMenuDirectory
     CreateShortCut "$newStartMenuLink" "$appExe" "" "$INSTDIR\conductor-${VERSION}.ico" 0 "" "" "${APP_DESCRIPTION}"
     WinShell::SetLnkAUMI "$newStartMenuLink" "${APP_ID}"

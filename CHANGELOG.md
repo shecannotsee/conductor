@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.14] - 2026-11-25
+
+### Changed
+
+- 安装向导增加安装内容、默认 workspace 位置及用户数据保留说明。
+- 安装过程详情显示 workspace、图标和桌面／开始菜单快捷方式的处理步骤。
+
 ## [0.5.13] - 2026-11-25
 
 ### Fixed

@@ -21,6 +21,15 @@ for (const [page, prefix] of [['MUI_PAGE_INSTFILES', ''], ['MUI_UNPAGE_INSTFILES
   assisted = assisted.replace(marker, `!define MUI_PAGE_CUSTOMFUNCTION_SHOW ${prefix}ConductorProgressShow\n  !define MUI_PAGE_CUSTOMFUNCTION_LEAVE ${prefix}ConductorProgressLeave\n  ${marker}`);
 }
 fs.writeFileSync(assistedPath, assisted);
+const extractPath = path.join(output, 'include/extractAppPackage.nsh');
+let extract = fs.readFileSync(extractPath, 'utf8');
+if (!extract.includes('  Nsis7z::Extract "${FILE}"') || !extract.includes('    CopyFiles /SILENT "$PLUGINSDIR\\7z-out\\*" $OUTDIR')) {
+  throw new Error('NSIS extraction steps changed; review installer details.');
+}
+extract = extract
+  .replace('  Nsis7z::Extract "${FILE}"', '  DetailPrint "正在解压 Conductor 应用和随附运行环境"\n  Nsis7z::Extract "${FILE}"')
+  .replace('    CopyFiles /SILENT "$PLUGINSDIR\\7z-out\\*" $OUTDIR', '    DetailPrint "正在将应用文件写入：$OUTDIR"\n    CopyFiles /SILENT "$PLUGINSDIR\\7z-out\\*" $OUTDIR');
+fs.writeFileSync(extractPath, extract);
 let uninstall = fs.readFileSync(path.join(templates, 'uninstaller.nsh'), 'utf8');
 const start = uninstall.indexOf('  ${if} $isDeleteAppData == "1"');
 const end = uninstall.indexOf('  DeleteRegKey SHELL_CONTEXT', start);

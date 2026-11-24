@@ -33,7 +33,9 @@ try {
         }
         if (!$Uninstall -and ($Names -join '|') -match '创建桌面快捷方式') {
             if (($Names -join '|') -notmatch '添加到开始菜单') { throw 'Start-menu option missing' }
-            Write-Host 'PASS: hidden native installer exposes desktop/start-menu options before installation.'
+            $PageText = $Names -join '|'
+            if ($PageText -notmatch '安装内容与选项' -or $PageText -notmatch 'Codex 运行环境' -or $PageText -notmatch '默认 workspace' -or $PageText -notmatch '聊天记录、API 配置和缓存') { throw 'Detailed installation summary missing' }
+            Write-Host 'PASS: installer exposes install contents, workspace/data locations and shortcut options before installation.'
             exit 0
         }
         foreach ($Control in $Controls.GetEnumerator()) {
