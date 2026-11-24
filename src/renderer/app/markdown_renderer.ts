@@ -29,7 +29,8 @@ type MarkdownRenderContext = {
 };
 
 function normalizeLocalLinkTarget(target) {
-  const value = String(target || '').trim();
+  const raw = String(target || '').trim();
+  const value = /^\/[a-zA-Z]:[\\/]/.test(raw) ? raw.slice(1) : raw;
   if (!value) {
     return '';
   }

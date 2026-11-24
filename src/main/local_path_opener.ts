@@ -39,7 +39,7 @@ function parseLocalOpenTarget(input) {
     return { path: '', line: 0, column: 0 };
   }
 
-  let targetPath = raw;
+  let targetPath = process.platform === 'win32' && /^\/[a-zA-Z]:[\\/]/.test(raw) ? raw.slice(1) : raw;
   let hashPart = '';
   if (/^file:\/\//i.test(raw)) {
     try {

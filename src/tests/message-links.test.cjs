@@ -6,7 +6,8 @@ const fs = require('node:fs'), os = require('node:os'), path = require('node:pat
   const data = path.join(temp, 'ConductorInstalled'); fs.mkdirSync(data, { recursive: true });
   const file = path.join(temp, '安装 包.exe'); fs.writeFileSync(file, 'test');
   const url = 'https://example.com/download?q=hello%20world';
-  const text = `[下载安装包](<${file.replaceAll('\\', '/')}>)\n\n[网页](${url})`;
+  const windowsStylePath = `/${file.replaceAll('\\', '/')}`;
+  const text = `[下载安装包](<${windowsStylePath}>)\n\n[网页](${url})`;
   fs.writeFileSync(path.join(data, 'state.electron.json'), JSON.stringify({ conversations: [{ id: 'links', title: 'Links', messages: [{ role: 'assistant', text }] }], activeConversationId: 'links' }));
   const env = { ...process.env, APPDATA: temp, LOCALAPPDATA: path.join(temp, 'local') }; delete env.ELECTRON_RUN_AS_NODE;
   let app;

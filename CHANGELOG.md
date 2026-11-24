@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.13] - 2026-11-25
+
+### Fixed
+
+- 兼容 Windows 文件链接中的 `/E:/...` 格式，点击后正确定位文件。
+
 ## [0.5.12] - 2026-11-25
 
 ### Fixed
