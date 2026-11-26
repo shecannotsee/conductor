@@ -2415,6 +2415,42 @@ body.composer-resizing .composer-resize-handle::before {
   outline: none;
 }
 
+.composer-workdir-change {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  border: 0;
+  border-radius: 5px;
+  color: #60788f;
+  background: transparent;
+  cursor: pointer;
+}
+
+.composer-workdir-change svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.composer-workdir-change:hover:not(:disabled),
+.composer-workdir-change:focus-visible {
+  color: #0b70d7;
+  background: #3390ec12;
+  outline: none;
+}
+
+.composer-workdir-change:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
 .msg-block {
   margin: calc(10px * var(--chat-font-scale)) 0;
 }

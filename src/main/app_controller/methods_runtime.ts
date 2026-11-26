@@ -1,4 +1,5 @@
 const { nowTs, newConversation, getConversation } = require('../conversation_service');
+const fs = require('node:fs');
 const { defaultCommandTextForProvider, normalizeCliProvider, normalizeWorkdir } = require('../state_store');
 const {
   inferStructuredEventKind,
@@ -88,6 +89,33 @@ const runtimeMethods = {
       ...this.snapshot(),
       createdConversationId: conv.id,
     };
+  },
+
+  setConversationWorkdir(conversationId: string, workdir: string) {
+    const targetId = String(conversationId || '').trim();
+    const conv = getConversation(this.conversations, targetId);
+    if (!conv) return { error: '会话不存在', snapshot: this.snapshot() };
+    if (this._isConversationRunning(targetId) || this._pendingQueueSize(targetId) > 0) {
+      return { error: '请等待此对话的任务和排队消息结束后再更换工作目录。', snapshot: this.snapshot() };
+    }
+
+    const selected = String(workdir || '').trim();
+    if (!selected) return { error: '请选择工作目录。', snapshot: this.snapshot() };
+    const resolved = normalizeWorkdir(selected);
+    let validDirectory = false;
+    try { validDirectory = fs.statSync(resolved).isDirectory(); } catch { /* invalid or unavailable path */ }
+    if (!validDirectory) return { error: `工作目录不存在或不是文件夹:\n${resolved}`, snapshot: this.snapshot() };
+    if (resolved === normalizeWorkdir(conv.workdir || this._defaultWorkdir())) {
+      return { ...this.snapshot(), workdirUnchanged: true };
+    }
+
+    const previous = conv.workdir;
+    conv.workdir = resolved;
+    conv.updatedAt = nowTs();
+    this._appendStructuredEvent(targetId, 'hint', `工作目录已更换: ${previous || '-'} -> ${resolved}`);
+    this._syncConversationUpdated(conv);
+    this._persist();
+    return this.snapshot();
   },
 
   async _autoRefreshMetaForConversation(conversationId) {

@@ -4,6 +4,7 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
 const { openLocalPath } = require('./local_path_opener');
+const { registerChatIpc } = require('./ipc_chat');
 const { registerDocsCaptureIpc } = require('./docs_capture_main');
 const { resolveRepoRoot } = require('./project_paths');
 const {
@@ -362,42 +363,6 @@ function registerAppIpc({
     return getController().stopConversation(String(payload?.conversationId || ''));
   });
 
-  ipcMain.handle('chat:send', async (_, payload) => {
-    const options = payload?.options && typeof payload.options === 'object' ? payload.options : {};
-    return getController().sendMessage({
-      conversationId: String(payload?.conversationId || ''),
-      text: String(payload?.text || ''),
-      attachments: Array.isArray(payload?.attachments) ? payload.attachments : [],
-      appendUserMessage: options.appendUserMessage !== false,
-      forceFreshSession: Boolean(options.forceFreshSession),
-      fromRetry: Boolean(options.fromRetry),
-      goalMode: Boolean(options.goalMode),
-    });
-  });
-
-  ipcMain.handle('chat:insert', async (_, payload) => {
-    return getController().insertMessage({
-      conversationId: String(payload?.conversationId || ''),
-      text: String(payload?.text || ''),
-    });
-  });
-
-  ipcMain.handle('chat:retry-last', async (_, payload) => {
-    return getController().retryLastMessage(String(payload?.conversationId || ''));
-  });
-
-  ipcMain.handle('chat:cancel-queued-message', async (_, payload) => {
-    return getController().cancelQueuedMessage(
-      String(payload?.conversationId || ''),
-      String(payload?.queuedMessageId || ''),
-      Number(payload?.queuedIndex || 0),
-    );
-  });
-
-  ipcMain.handle('chat:cancel-all-queued-messages', async (_, payload) => {
-    return getController().cancelAllQueuedMessages(String(payload?.conversationId || ''));
-  });
-
   ipcMain.handle('shell:open-path', async (event, payload) => {
     if (event.sender !== getMainWindow()?.webContents || event.senderFrame !== event.sender.mainFrame) return { error: '无效的请求来源。' };
     return openLocalPath(payload?.path, payload?.reveal === true);
@@ -432,6 +397,18 @@ function registerAppIpc({
       setCloseGuardPending(false);
     }
   });
+
+  ipcMain.handle('conversation:set-workdir', async (event, payload) => {
+    if (event.sender !== getMainWindow()?.webContents || event.senderFrame !== event.sender.mainFrame) {
+      throw new Error('无效的请求来源。');
+    }
+    if (!payload || typeof payload.conversationId !== 'string' || typeof payload.workdir !== 'string') {
+      throw new Error('工作目录请求格式无效。');
+    }
+    return getController().setConversationWorkdir(payload.conversationId, payload.workdir);
+  });
+
+  registerChatIpc({ ipcMain, getMainWindow, getController });
 
   registerDocsCaptureIpc({
     app,

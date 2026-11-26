@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.5.15] - 2026-11-27
+
+### Added
+
+- 支持单独更换当前对话的工作目录；不会修改默认目录、其他对话或团队目录。
+- 任务运行或排队时禁止更换目录，并校验所选路径有效。
+
 ## [0.5.14] - 2026-11-25
 
 ### Changed

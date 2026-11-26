@@ -17,6 +17,7 @@ function renderComposerWorkdir() {
   }
   if (state.workspaceMode === 'team') {
     el.composerWorkdir.classList.add('hidden');
+    el.btnChangeConversationWorkdir?.classList.add('hidden');
     el.composerWorkdirValue.removeAttribute('data-open-path');
     el.composerWorkdirValue.removeAttribute('data-copy-text');
     el.composerWorkdirValue.removeAttribute('aria-label');
@@ -26,6 +27,15 @@ function renderComposerWorkdir() {
   const workdir = String(conv?.workdir || '').trim();
   el.labelComposerWorkdir.textContent = `${t('composerWorkdir')}:`;
   el.composerWorkdir.classList.toggle('hidden', !workdir);
+  el.btnChangeConversationWorkdir?.classList.toggle('hidden', !conv);
+  if (el.btnChangeConversationWorkdir) {
+    const busy = state.runningConversationIds.has(state.activeConversationId)
+      || Number(state.queuedCountByConversation[state.activeConversationId] || 0) > 0;
+    el.btnChangeConversationWorkdir.disabled = busy;
+    el.btnChangeConversationWorkdir.title = busy
+      ? t('changeConversationWorkdirBusy')
+      : t('changeConversationWorkdir');
+  }
   const directoryName = workdir.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || workdir;
   el.composerWorkdirValue.textContent = directoryName || '-';
   el.composerWorkdirValue.title = workdir || '-';

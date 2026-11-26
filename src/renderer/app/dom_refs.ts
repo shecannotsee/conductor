@@ -208,6 +208,7 @@ const el: UiElementRefs = {
   composerWorkdir: queryById<HTMLElement>('composer-workdir'),
   labelComposerWorkdir: queryById<HTMLElement>('label-composer-workdir'),
   composerWorkdirValue: queryById<HTMLElement>('composer-workdir-value'),
+  btnChangeConversationWorkdir: queryById<HTMLButtonElement>('btn-change-conversation-workdir'),
 
   renameModal: queryById<HTMLElement>('rename-modal'),
   renameModalTitle: queryById<HTMLElement>('rename-modal-title'),

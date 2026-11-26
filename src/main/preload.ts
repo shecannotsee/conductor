@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('codexdesk', {
   testNotificationProvider: () => ipcRenderer.invoke('app:test-notification-provider'),
   testRemoteControlProvider: () => ipcRenderer.invoke('app:test-remote-control-provider'),
   pickWorkdir: (payload) => ipcRenderer.invoke('app:pick-workdir', payload),
+  setConversationWorkdir: (conversationId, workdir) => ipcRenderer.invoke('conversation:set-workdir', { conversationId, workdir }),
 
   switchConversation: (conversationId) => ipcRenderer.invoke('conversation:switch', { conversationId }),
   createConversation: (payload) => ipcRenderer.invoke('conversation:create', payload),

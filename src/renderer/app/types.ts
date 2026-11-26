@@ -426,6 +426,7 @@ export interface CodexDeskApi {
   testNotificationProvider(): Promise<GenericResult>;
   testRemoteControlProvider(): Promise<GenericResult>;
   pickWorkdir(payload?: { defaultPath?: string }): Promise<GenericResult>;
+  setConversationWorkdir(conversationId: string, workdir: string): Promise<GenericResult>;
   switchConversation(conversationId: string): Promise<ConversationSwitchPayload>;
   createConversation(payload?: { workdir?: string; provider?: 'codex' | 'claude'; title?: string; preserveActive?: boolean }): Promise<AppSnapshot>;
   pickImportSession(): Promise<GenericResult>;
@@ -652,6 +653,7 @@ export interface UiElementRefs {
   composerWorkdir: HTMLElement;
   labelComposerWorkdir: HTMLElement;
   composerWorkdirValue: HTMLElement;
+  btnChangeConversationWorkdir: HTMLButtonElement;
   createConversationModal: HTMLElement;
   createConversationTitle: HTMLElement;
   createConversationMessage: HTMLElement;
